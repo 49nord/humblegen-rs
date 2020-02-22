@@ -1,0 +1,30 @@
+snake_case_ident = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | "_" | ASCII_DIGIT)* }
+camel_case_ident = @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_LOWER | ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
+open_curly = _{ "{" }
+close_curly = _{ "}" }
+open_paren = _{ "(" }
+close_paren = _{ ")" }
+comma = _{ "," }
+open_bracket = _{ "[" }
+close_bracket = _{ "]" }
+colon = _{ ":" }
+
+struct_definition = { "struct" ~ camel_case_ident ~ struct_fields }
+struct_fields = { open_curly ~ (struct_field_def ~ comma)* ~ close_curly }
+struct_field_def = { snake_case_ident ~ colon ~ type_ident }
+
+enum_definition = _{ "enum" ~ enum_def }
+enum_def = { camel_case_ident ~ open_curly ~ (enum_variant_def ~ comma)* ~ close_curly }
+enum_variant_def = { camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident }
+
+type_ident = { built_in_atom | list_type | tuple_def | camel_case_ident }
+built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" }
+list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
+tuple_def = { open_paren ~ type_ident ~ (comma ~ type_ident)* ~ close_paren }
+
+spec_item = _{ (struct_definition | enum_definition) }
+spec = { (spec_item)* }
+doc = _{ SOI ~ spec ~ EOI }
+
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
