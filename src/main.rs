@@ -1,6 +1,7 @@
 use std::fs;
 
 mod ast;
+mod elm;
 mod parser;
 mod rust;
 mod util;
@@ -10,4 +11,6 @@ fn main() {
     let spec = parser::parse(&input);
 
     println!("{}", rust::render(&spec));
+
+    println!("{}", elm::render(&spec));
 }
