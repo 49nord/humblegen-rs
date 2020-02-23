@@ -1,145 +1,107 @@
 use crate::ast;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
 
-#[derive(Debug)]
-pub struct RustVisitor {
-    tokens: TokenStream,
-}
-
-impl ast::Visitor for RustVisitor {
-    fn visit_type_ident_builtin(&mut self, atom: &ast::AtomType) {
-        let atom_quoted = match atom {
-            ast::AtomType::Str => quote!(String),
-            ast::AtomType::I32 => quote!(i32),
-            ast::AtomType::U32 => quote!(u32),
-            ast::AtomType::U8 => quote!(u8),
-            ast::AtomType::F64 => quote!(f64),
-        };
-
-        self.tokens.extend(atom_quoted);
-    }
-
-    fn visit_type_ident_list(&mut self, inner: &ast::TypeIdent) {
-        self.tokens.extend(quote!(Vec));
-        self.push_punct('<');
-        self.visit_type_ident(inner);
-        self.push_punct('>');
-    }
-
-    fn visit_type_ident_option(&mut self, inner: &ast::TypeIdent) {
-        self.tokens.extend(quote!(Option));
-        self.push_punct('<');
-        self.visit_type_ident(inner);
-        self.push_punct('>');
-    }
-
-    fn visit_type_ident_map(&mut self, key: &ast::TypeIdent, value: &ast::TypeIdent) {
-        self.tokens.extend(quote!(::std::collections::HashMap));
-        self.push_punct('<');
-        self.visit_type_ident(key);
-        self.push_punct(',');
-        self.visit_type_ident(value);
-        self.push_punct('>');
-    }
-
-    fn visit_type_ident_user(&mut self, id: &str) {
-        let ident = quote::format_ident!("{}", id);
-        self.tokens.extend(quote!(#ident));
-    }
-
-    fn begin_enum(&mut self, ident: &str) {
-        let ident = quote::format_ident!("{}", ident);
-        self.tokens.extend(quote!(
-            #[derive(Debug, Deserialize, Serialize)]
-            enum #ident
-        ));
-        self.push_punct('{');
-    }
-
-    fn finish_enum(&mut self, _ident: &str) {
-        self.push_punct('}');
-    }
-
-    fn begin_variant(&mut self, ident: &str) {
-        let ident = quote::format_ident!("{}", ident);
-
-        self.tokens.extend(quote!(#ident));
-    }
-
-    fn finish_variant(&mut self, _ident: &str) {
-        self.push_punct(',');
-    }
-
-    fn begin_struct(&mut self, ident: &str) {
-        let ident = quote::format_ident!("{}", ident);
-
-        self.tokens.extend(quote!(
-            #[derive(Debug, Deserialize, Serialize)]
-            struct #ident
-        ));
-    }
-
-    fn finish_struct(&mut self, _ident: &str) {}
-
-    fn begin_tuple(&mut self) {
-        self.push_punct('(');
-    }
-
-    fn finish_tuple(&mut self) {
-        self.push_punct(')');
-    }
-
-    fn begin_tuple_component(&mut self) {}
-
-    fn finish_tuple_component(&mut self) {
-        self.push_punct(',');
-    }
-
-    fn begin_struct_fields(&mut self) {
-        self.push_punct('{');
-    }
-
-    fn finish_struct_fields(&mut self) {
-        self.push_punct('}');
-    }
-
-    fn begin_field(&mut self, ident: &str) {
-        let ident = quote::format_ident!("{}", ident);
-        self.tokens.extend(quote!(
-            #ident:
-        ));
-    }
-
-    fn finish_field(&mut self, _ident: &str) {
-        self.push_punct(',');
-    }
-
-    fn finish_last_field(&mut self, _ident: &str) {}
-
-    fn finish_last_tuple_component(&mut self) {}
-
-    fn finish_last_variant(&mut self, _ident: &str) {}
-}
-
-impl RustVisitor {
-    pub fn new() -> Self {
-        RustVisitor {
-            tokens: TokenStream::new(),
-        }
-    }
-
-    fn push_punct(&mut self, op: char) {
-        proc_macro2::Punct::new(op, proc_macro2::Spacing::Alone).to_tokens(&mut self.tokens);
-    }
-
-    pub fn into_inner(self) -> TokenStream {
-        self.tokens
-    }
+fn fmt_ident(ident: &str) -> proc_macro2::Ident {
+    quote::format_ident!("{}", ident)
 }
 
 pub fn render(spec: &ast::Spec) -> TokenStream {
-    let mut visitor = RustVisitor::new();
-    ast::Visitor::visit_spec(&mut visitor, spec);
-    visitor.into_inner()
+    spec.iter()
+        .flat_map(|spec_item| match spec_item {
+            ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
+            ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+        })
+        .collect()
+}
+
+fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
+    let ident = fmt_ident(&sdef.name);
+    let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
+
+    quote!(
+        #[derive(Debug, serde::Deserialize, serde::Serialize)]
+        pub struct #ident {
+            #(#fields),*
+        }
+    )
+}
+
+fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
+    let ident = fmt_ident(&edef.name);
+    let variants: Vec<_> = edef.variants.iter().map(render_variant).collect();
+
+    quote!(
+        #[derive(Debug, serde::Deserialize, serde::Serialize)]
+        pub enum #ident {
+            #(#variants),*
+    })
+}
+
+fn render_field_node(field: &ast::FieldNode) -> TokenStream {
+    let ident = fmt_ident(&field.name);
+    let ty = render_type_ident(&field.type_ident);
+    quote!(#ident: #ty)
+}
+
+fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
+    let field = render_field_node(field);
+    quote!(pub #field)
+}
+
+fn render_variant(variant: &ast::VariantDef) -> TokenStream {
+    let ident = fmt_ident(&variant.name);
+
+    match variant.variant_type {
+        ast::VariantType::Simple => quote!(#ident),
+        ast::VariantType::Tuple(ref inner) => {
+            let tuple = render_tuple_def(inner);
+            quote!(#ident #tuple)
+        }
+        ast::VariantType::Struct(ref fields) => {
+            let fields: Vec<_> = fields.iter().map(render_field_node).collect();
+
+            quote!(#ident { #(#fields),* })
+        }
+    }
+}
+
+fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
+    match type_ident {
+        ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
+        ast::TypeIdent::List(inner) => {
+            let inner_ty = render_type_ident(inner);
+            quote!(Vec<#inner_ty>)
+        }
+        ast::TypeIdent::Option(inner) => {
+            let inner_ty = render_type_ident(inner);
+            quote!(Option<#inner_ty>)
+        }
+        ast::TypeIdent::Map(key, value) => {
+            let key_ty = render_type_ident(key);
+            let value_ty = render_type_ident(value);
+            quote!(::std::collections::HashMap<#key_ty, #value_ty>)
+        }
+        ast::TypeIdent::Tuple(tdef) => render_tuple_def(tdef),
+        ast::TypeIdent::UserDefined(ident) => {
+            let id = fmt_ident(&ident);
+            quote!(#id)
+        }
+    }
+}
+
+fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
+    let components: Vec<_> = tdef.components().iter().map(render_type_ident).collect();
+
+    quote!((#(#components),*))
+}
+
+fn render_atom(atom: &ast::AtomType) -> TokenStream {
+    match atom {
+        ast::AtomType::Str => quote!(String),
+        ast::AtomType::I32 => quote!(i32),
+        ast::AtomType::U32 => quote!(u32),
+        ast::AtomType::U8 => quote!(u8),
+        ast::AtomType::F64 => quote!(f64),
+    }
 }
