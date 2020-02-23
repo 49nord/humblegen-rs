@@ -98,6 +98,20 @@ impl ast::Visitor for ElmTypesVisitor {
         self.output.push_str(")");
     }
 
+    fn visit_type_ident_option(&mut self, inner: &ast::TypeIdent) {
+        self.output.push_str("(Maybe ");
+        self.visit_type_ident(inner);
+        self.output.push_str(")");
+    }
+
+    fn visit_type_ident_map(&mut self, key: &ast::TypeIdent, value: &ast::TypeIdent) {
+        self.output.push_str("(Dict ");
+        self.visit_type_ident(key);
+        self.output.push_str(" ");
+        self.visit_type_ident(value);
+        self.output.push_str(")");
+    }
+
     fn visit_type_ident_user(&mut self, id: &str) {
         self.output.push_str(id);
     }

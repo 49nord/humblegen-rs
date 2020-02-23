@@ -4,7 +4,9 @@ struct Customer {
     net_worth: f64,
     favorite_color: Color,
     aliases: list[str],
-    coords: (i32, i32)
+    coords: (i32, i32),
+    email: option[str],
+    bets: map[str][f64]
 }
 
 enum Color {

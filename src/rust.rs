@@ -27,6 +27,22 @@ impl ast::Visitor for RustVisitor {
         self.push_punct('>');
     }
 
+    fn visit_type_ident_option(&mut self, inner: &ast::TypeIdent) {
+        self.tokens.extend(quote!(Option));
+        self.push_punct('<');
+        self.visit_type_ident(inner);
+        self.push_punct('>');
+    }
+
+    fn visit_type_ident_map(&mut self, key: &ast::TypeIdent, value: &ast::TypeIdent) {
+        self.tokens.extend(quote!(::std::collections::HashMap));
+        self.push_punct('<');
+        self.visit_type_ident(key);
+        self.push_punct(',');
+        self.visit_type_ident(value);
+        self.push_punct('>');
+    }
+
     fn visit_type_ident_user(&mut self, id: &str) {
         let ident = quote::format_ident!("{}", id);
         self.tokens.extend(quote!(#ident));

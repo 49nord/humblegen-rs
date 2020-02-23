@@ -59,6 +59,8 @@ pub struct FieldNode {
 pub enum TypeIdent {
     BuiltIn(AtomType),
     List(Box<TypeIdent>),
+    Option(Box<TypeIdent>),
+    Map(Box<TypeIdent>, Box<TypeIdent>),
     Tuple(TupleDef),
     UserDefined(String),
 }
@@ -221,6 +223,8 @@ pub trait Visitor {
         match type_ident {
             TypeIdent::BuiltIn(at) => self.visit_type_ident_builtin(at),
             TypeIdent::List(inner) => self.visit_type_ident_list(inner),
+            TypeIdent::Option(inner) => self.visit_type_ident_option(inner),
+            TypeIdent::Map(key, value) => self.visit_type_ident_map(key, value),
             TypeIdent::Tuple(tdef) => self.visit_type_ident_tuple(tdef),
             TypeIdent::UserDefined(id) => self.visit_type_ident_user(id),
         }
@@ -228,6 +232,8 @@ pub trait Visitor {
 
     fn visit_type_ident_builtin(&mut self, atom: &AtomType);
     fn visit_type_ident_list(&mut self, inner: &TypeIdent);
+    fn visit_type_ident_option(&mut self, inner: &TypeIdent);
+    fn visit_type_ident_map(&mut self, key: &TypeIdent, value: &TypeIdent);
     fn visit_type_ident_tuple(&mut self, tdef: &TupleDef) {
         self.visit_tuple_def(tdef);
     }

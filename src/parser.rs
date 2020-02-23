@@ -69,6 +69,8 @@ fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     match inner.as_rule() {
         Rule::built_in_atom => TypeIdent::BuiltIn(parse_built_in_atom(inner)),
         Rule::list_type => parse_list_type(inner),
+        Rule::option_type => parse_option_type(inner),
+        Rule::map_type => parse_map_type(inner),
         Rule::tuple_def => TypeIdent::Tuple(parse_tuple_def(inner)),
         Rule::camel_case_ident => TypeIdent::UserDefined(inner.as_span().as_str().to_string()),
         _ => unreachable!(dbg!(inner)),
@@ -90,6 +92,23 @@ fn parse_list_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().into_iter().next().unwrap();
 
     TypeIdent::List(Box::new(parse_type_ident(inner)))
+}
+
+fn parse_option_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
+    let inner = pair.into_inner().into_iter().next().unwrap();
+
+    TypeIdent::Option(Box::new(parse_type_ident(inner)))
+}
+
+fn parse_map_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
+    let mut inners = pair.into_inner().into_iter();
+    let key_type = inners.next().unwrap();
+    let value_type = inners.next().unwrap();
+
+    TypeIdent::Map(
+        Box::new(parse_type_ident(key_type)),
+        Box::new(parse_type_ident(value_type)),
+    )
 }
 
 fn parse_tuple_def(pair: pest::iterators::Pair<Rule>) -> TupleDef {
