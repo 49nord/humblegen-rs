@@ -20,7 +20,7 @@ fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
 
     quote!(
-        #[derive(Debug, serde::Deserialize, serde::Serialize)]
+        #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
         pub struct #ident {
             #(#fields),*
         }
@@ -32,7 +32,7 @@ fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let variants: Vec<_> = edef.variants.iter().map(render_variant).collect();
 
     quote!(
-        #[derive(Debug, serde::Deserialize, serde::Serialize)]
+        #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
         pub enum #ident {
             #(#variants),*
     })
