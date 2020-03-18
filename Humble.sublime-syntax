@@ -1,0 +1,32 @@
+%YAML 1.2
+---
+name: Humble
+file_extensions: [humble]
+scope: source.humble
+
+contexts:
+  main:
+    - include: builtin-type
+    - include: keywords
+    - include: punctuation
+    - include: comments
+
+  builtin-type:
+    - match: '\b(str|i32|u32|f64|u8)\b'
+      scope: storage.type.humble
+
+  keywords:
+    - match: '\b(struct|enum)\b'
+      scope: keyword.control.humble
+
+  punctuation:
+    - match: ':'
+      scope: punctuation.separator.humble
+
+  comments:
+    - match: '//'
+      scope: punctuation.definition.comment.humble
+      push:
+        - meta_scope: comment.line.double-slash.humble
+        - match: $\n?
+          pop: true
