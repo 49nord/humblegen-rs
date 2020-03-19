@@ -1,13 +1,33 @@
+// This is an example file, illustrating humblegens file format.
+
+// Structs must be pascal-cased, but cases will be converted depending in the programming language
+// used to output.
 struct Customer {
+    // Strings are assumed to be UTF8 formatted bytestrings.
     name: str,
+
+    // Supported numeric types are `i32`, `u32` and `u8`.
     id: i32,
+
+    // There is only one float type, `f64`.
     net_worth: f64,
+
+    // Enums can be referenced in struct.
     favorite_color: Color,
+
+    // Lists are collections of multiple elements of a single other type.
     aliases: list[str],
+
+    // Tuples are supported, but must contain at least two elements.
     coords: (i32, i32),
+
+    // Optional values are supported and map to each language's native type, if available.
     email: option[str],
+
+    // Maps are supported, but using non-string keys is not allowed.
     bets: map[str][f64]
 }
+
 
 enum Color {
     Red,
