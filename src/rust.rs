@@ -1,11 +1,17 @@
+//! Rust code generator.
+
 use crate::ast;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+/// Helper function to format an ident.
+///
+/// Turns a string into an ident, eases the use inside `quote!`.
 fn fmt_ident(ident: &str) -> proc_macro2::Ident {
     quote::format_ident!("{}", ident)
 }
 
+/// Render a spec definition.
 pub fn render(spec: &ast::Spec) -> TokenStream {
     spec.iter()
         .flat_map(|spec_item| match spec_item {
@@ -15,6 +21,7 @@ pub fn render(spec: &ast::Spec) -> TokenStream {
         .collect()
 }
 
+/// Render a struct definition.
 fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
     let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
@@ -27,6 +34,7 @@ fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     )
 }
 
+/// Render an enum definition.
 fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let ident = fmt_ident(&edef.name);
     let variants: Vec<_> = edef.variants.iter().map(render_variant).collect();
@@ -38,17 +46,23 @@ fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     })
 }
 
+/// Render a field node.
 fn render_field_node(field: &ast::FieldNode) -> TokenStream {
     let ident = fmt_ident(&field.name);
     let ty = render_type_ident(&field.type_ident);
     quote!(#ident: #ty)
 }
 
+/// Render a public field node.
+///
+/// Even though all fields are pub in generated code, fields in a `pub enum` cannot carry an
+/// additional `pub` qualifier.
 fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
     let field = render_field_node(field);
     quote!(pub #field)
 }
 
+/// Render an enum variant.
 fn render_variant(variant: &ast::VariantDef) -> TokenStream {
     let ident = fmt_ident(&variant.name);
 
@@ -66,6 +80,7 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
     }
 }
 
+/// Render a type identifier.
 fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
     match type_ident {
         ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
@@ -90,12 +105,14 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
     }
 }
 
+/// Render a tuple definition.
 fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
     let components: Vec<_> = tdef.components().iter().map(render_type_ident).collect();
 
     quote!((#(#components),*))
 }
 
+/// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> TokenStream {
     match atom {
         ast::AtomType::Str => quote!(String),

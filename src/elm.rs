@@ -1,7 +1,13 @@
+//! Elm code generator.
+
 use crate::ast;
 use inflector::cases::camelcase::to_camel_case;
 use itertools::Itertools;
 
+/// Elm module preamble
+///
+/// The preamble is inserted into every generated Elm module and contains shared functions used by
+/// the generated code.
 const PREAMBLE: &str = "module Protocol exposing (..)
 import Dict exposing (Dict)
 import Json.Decode as D
@@ -32,6 +38,7 @@ encMaybe enc = Maybe.withDefault E.null << Maybe.map enc
 
 \n\n";
 
+/// Render a definition.
 fn render_def(spec: &ast::Spec) -> String {
     spec.iter()
         .map(|spec_item| match spec_item {
@@ -41,6 +48,7 @@ fn render_def(spec: &ast::Spec) -> String {
         .join("\n\n")
 }
 
+/// Render a struct definition.
 fn render_struct_def(sdef: &ast::StructDef) -> String {
     format!(
         "type alias {name} = {{ {fields} }}",
@@ -49,6 +57,7 @@ fn render_struct_def(sdef: &ast::StructDef) -> String {
     )
 }
 
+/// Render an enum definition.
 fn render_enum_def(edef: &ast::EnumDef) -> String {
     let variants: Vec<_> = edef.variants.iter().map(render_variant_def).collect();
 
@@ -59,6 +68,7 @@ fn render_enum_def(edef: &ast::EnumDef) -> String {
     )
 }
 
+/// Render a struct field.
 fn render_struct_field(field: &ast::FieldNode) -> String {
     format!(
         "{name}: {ty}",
@@ -67,6 +77,9 @@ fn render_struct_field(field: &ast::FieldNode) -> String {
     )
 }
 
+/// Add optional parenthesis is necessary.
+///
+/// Wraps `s` in parentheses if it contains a space.
 fn opt_parens(s: String) -> String {
     if s.contains(' ') {
         format!("({})", s)
@@ -75,6 +88,7 @@ fn opt_parens(s: String) -> String {
     }
 }
 
+/// Render a variant definition.
 fn render_variant_def(variant: &ast::VariantDef) -> String {
     match variant.variant_type {
         ast::VariantType::Simple => variant.name.clone(),
@@ -96,6 +110,7 @@ fn render_variant_def(variant: &ast::VariantDef) -> String {
     }
 }
 
+/// Render a type identifier.
 fn render_type_ident(type_ident: &ast::TypeIdent) -> String {
     match type_ident {
         ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
@@ -111,6 +126,7 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> String {
     }
 }
 
+/// Render a tuple definition.
 fn render_tuple_def(tdef: &ast::TupleDef) -> String {
     format!(
         "({})",
@@ -118,6 +134,7 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> String {
     )
 }
 
+/// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> String {
     match atom {
         ast::AtomType::Str => "String",
@@ -129,6 +146,9 @@ fn render_atom(atom: &ast::AtomType) -> String {
     .to_owned()
 }
 
+/// Render decoders for a spec.
+///
+/// This is a top-level function similar to `render_def`.
 fn render_decoders(spec: &ast::Spec) -> String {
     spec.iter()
         .map(|spec_item| match spec_item {
@@ -138,6 +158,7 @@ fn render_decoders(spec: &ast::Spec) -> String {
         .join("\n\n")
 }
 
+/// Render decoder for a struct.
 fn render_struct_decoder(sdef: &ast::StructDef) -> String {
     format!(
         "{dec_name} : D.Decoder {name} \n\
@@ -148,6 +169,7 @@ fn render_struct_decoder(sdef: &ast::StructDef) -> String {
     )
 }
 
+/// Render decoder for an enum.
 fn render_enum_decoder(edef: &ast::EnumDef) -> String {
     let optional_string_decoder = if edef.simple_variants().count() > 0 {
         format!(
@@ -181,6 +203,7 @@ fn render_enum_decoder(edef: &ast::EnumDef) -> String {
     )
 }
 
+/// Render decoder for a field.
 fn render_field_decoder(field: &ast::FieldNode) -> String {
     format!(
         "|> required \"{name}\" {decoder}",
@@ -189,6 +212,7 @@ fn render_field_decoder(field: &ast::FieldNode) -> String {
     )
 }
 
+/// Render decoder for an enum variant.
 fn render_variant_decoder(variant: &ast::VariantDef) -> String {
     match variant.variant_type {
         ast::VariantType::Simple => unreachable!("cannot build enum decoder for simple variant"),
@@ -213,6 +237,7 @@ fn render_variant_decoder(variant: &ast::VariantDef) -> String {
     }
 }
 
+/// Render a decoder for a type.
 fn render_type_decoder(type_ident: &ast::TypeIdent) -> String {
     match type_ident {
         ast::TypeIdent::BuiltIn(atom) => render_atom_decoder(atom),
@@ -233,6 +258,7 @@ fn render_type_decoder(type_ident: &ast::TypeIdent) -> String {
     }
 }
 
+/// Render a decoder for a tuple.
 fn render_tuple_decoder(tdef: &ast::TupleDef) -> String {
     let len = tdef.components().len();
     let parts: Vec<String> = (0..len).map(|i| format!("x{}", i)).collect();
@@ -245,6 +271,7 @@ fn render_tuple_decoder(tdef: &ast::TupleDef) -> String {
     )
 }
 
+/// Render a pipeline that decodes tuple fields by index.
 fn render_components_by_index_pipeline(tdef: &ast::TupleDef) -> String {
     let len = tdef.components().len();
 
@@ -259,6 +286,7 @@ fn render_components_by_index_pipeline(tdef: &ast::TupleDef) -> String {
         .join(" ")
 }
 
+/// Render a decoder for an atomic type.
 fn render_atom_decoder(atom: &ast::AtomType) -> String {
     match atom {
         ast::AtomType::Str => "D.string",
@@ -270,18 +298,22 @@ fn render_atom_decoder(atom: &ast::AtomType) -> String {
     .to_string()
 }
 
+/// Construct decoder function name.
 fn decoder_name(ident: &str) -> String {
     to_camel_case(&format!("{}Decoder", ident))
 }
 
+/// Construct function name for an enum decoder.
 fn enum_string_decoder_name(ident: &str) -> String {
     to_camel_case(&format!("parseEnum{}FromString", ident))
 }
 
+/// Construct name for a field.
 fn field_name(ident: &str) -> String {
     to_camel_case(ident)
 }
 
+/// Render decoding helper functions for a spec.
 fn render_helpers(spec: &ast::Spec) -> String {
     spec.iter()
         .map(|spec_item| match spec_item {
@@ -292,6 +324,7 @@ fn render_helpers(spec: &ast::Spec) -> String {
         .join("\n\n")
 }
 
+/// Render helper functions for enum decoders.
 fn render_enum_helpers(edef: &ast::EnumDef) -> String {
     format!(
         "{fname} : String -> Maybe {type_name}\n\
@@ -308,10 +341,12 @@ fn render_enum_helpers(edef: &ast::EnumDef) -> String {
     )
 }
 
+/// Construct name of encoder function for specific `ident`.
 fn encoder_name(ident: &str) -> String {
     to_camel_case(&format!("encode{}", ident))
 }
 
+/// Render encoder functions for `spec`.
 fn render_encoders(spec: &ast::Spec) -> String {
     spec.iter()
         .map(|spec_item| match spec_item {
@@ -321,6 +356,7 @@ fn render_encoders(spec: &ast::Spec) -> String {
         .join("\n\n")
 }
 
+/// Render a struct encoder.
 fn render_struct_encoder(sdef: &ast::StructDef) -> String {
     format!(
         "{encoder_name} : {type_name} -> E.Value\n\
@@ -331,6 +367,7 @@ fn render_struct_encoder(sdef: &ast::StructDef) -> String {
     )
 }
 
+/// Render an enum encoder.
 fn render_enum_encoder(edef: &ast::EnumDef) -> String {
     format!(
         "{encoder_name} : {type_name} -> E.Value\n\
@@ -347,6 +384,7 @@ fn render_enum_encoder(edef: &ast::EnumDef) -> String {
     )
 }
 
+/// Render a field encoder.
 fn render_field_encoder(field: &ast::FieldNode) -> String {
     format!(
         "(\"{name}\", {value_encoder} obj.{field_name})",
@@ -356,6 +394,7 @@ fn render_field_encoder(field: &ast::FieldNode) -> String {
     )
 }
 
+/// Render encoding code for variant of enum.
 fn render_variant_encoder_branch(variant: &ast::VariantDef) -> String {
     match variant.variant_type {
         ast::VariantType::Simple => format!("{name} -> E.string \"{name}\"", name = variant.name),
@@ -380,6 +419,7 @@ fn render_variant_encoder_branch(variant: &ast::VariantDef) -> String {
     }
 }
 
+/// Render a type encoder.
 fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
     match type_ident {
         ast::TypeIdent::BuiltIn(atom) => render_atom_encoder(atom),
@@ -400,6 +440,7 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
     }
 }
 
+/// Render an atomic type encoder.
 fn render_atom_encoder(atom: &ast::AtomType) -> String {
     match atom {
         ast::AtomType::Str => "E.string",
@@ -411,6 +452,7 @@ fn render_atom_encoder(atom: &ast::AtomType) -> String {
     .to_owned()
 }
 
+/// Render a tuple encoder.
 fn render_tuple_encoder(tdef: &ast::TupleDef) -> String {
     format!(
         "\\({field_names}) -> E.list identity [ {encode_values} ]",
@@ -426,6 +468,7 @@ fn render_tuple_encoder(tdef: &ast::TupleDef) -> String {
     )
 }
 
+/// Render all code for `spec`.
 pub fn render(spec: &ast::Spec) -> String {
     // Add preamble and return.
     format!(

@@ -1,12 +1,16 @@
+//! The humble language parser.
+
 use pest::Parser;
 use pest_derive::Parser;
 
+/// The humble language parser, derived from the PEST grammar file.
 #[derive(Parser)]
 #[grammar = "humble.pest"]
 pub struct HumbleParser;
 
 use crate::ast::*;
 
+/// Parse a struct definition.
 fn parse_struct_definition(pair: pest::iterators::Pair<Rule>) -> StructDef {
     let mut nodes = pair.into_inner();
     let name = nodes.next().unwrap().as_span().as_str().to_string();
@@ -15,11 +19,13 @@ fn parse_struct_definition(pair: pest::iterators::Pair<Rule>) -> StructDef {
     StructDef { name, fields }
 }
 
+/// Parse inner struct fields of struct definition.
 fn parse_struct_fields(pair: pest::iterators::Pair<Rule>) -> StructFields {
     let fields: Vec<_> = pair.into_inner().map(parse_struct_field_def).collect();
     StructFields(fields)
 }
 
+/// Parse enum definition.
 fn parse_enum_definition(pair: pest::iterators::Pair<Rule>) -> EnumDef {
     let mut nodes = pair.into_inner();
     let name = nodes.next().unwrap().as_span().as_str().to_string();
@@ -28,6 +34,7 @@ fn parse_enum_definition(pair: pest::iterators::Pair<Rule>) -> EnumDef {
     EnumDef { name, variants }
 }
 
+/// Parse enum variant definitions.
 fn parse_enum_variant_def(pair: pest::iterators::Pair<Rule>) -> VariantDef {
     let mut nodes = pair.into_inner();
     let name = nodes.next().unwrap().as_span().as_str().to_string();
@@ -52,6 +59,7 @@ fn parse_enum_variant_def(pair: pest::iterators::Pair<Rule>) -> VariantDef {
     }
 }
 
+/// Parse field definitions in struct.
 fn parse_struct_field_def(pair: pest::iterators::Pair<Rule>) -> FieldNode {
     let mut nodes = pair.into_inner();
     let name = nodes.next().unwrap().as_span().as_str().to_string();
@@ -60,6 +68,7 @@ fn parse_struct_field_def(pair: pest::iterators::Pair<Rule>) -> FieldNode {
     FieldNode { name, type_ident }
 }
 
+/// Parse type identifier.
 fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().next().unwrap();
     match inner.as_rule() {
@@ -73,6 +82,7 @@ fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     }
 }
 
+/// Parse a built-in atomic type.
 fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
     match pair.as_span().as_str() {
         "str" => AtomType::Str,
@@ -84,18 +94,21 @@ fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
     }
 }
 
+/// Parse a list type.
 fn parse_list_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().next().unwrap();
 
     TypeIdent::List(Box::new(parse_type_ident(inner)))
 }
 
+/// Parse a optional type.
 fn parse_option_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().next().unwrap();
 
     TypeIdent::Option(Box::new(parse_type_ident(inner)))
 }
 
+/// Parse a map type.
 fn parse_map_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let mut inners = pair.into_inner();
     let key_type = inners.next().unwrap();
@@ -107,10 +120,12 @@ fn parse_map_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     )
 }
 
+/// Parse a tuple definition.
 fn parse_tuple_def(pair: pest::iterators::Pair<Rule>) -> TupleDef {
     TupleDef(pair.into_inner().map(parse_type_ident).collect())
 }
 
+/// Parse a spec item (`struct` or `enum`).
 fn parse_spec_item(pair: pest::iterators::Pair<Rule>) -> SpecItem {
     match pair.as_rule() {
         Rule::struct_definition => SpecItem::StructDef(parse_struct_definition(pair)),
@@ -119,7 +134,7 @@ fn parse_spec_item(pair: pest::iterators::Pair<Rule>) -> SpecItem {
     }
 }
 
-// "parse spec"
+/// Parse complete spec.
 pub fn parse(input: &str) -> Spec {
     let humbled = HumbleParser::parse(Rule::doc, input)
         .unwrap()
