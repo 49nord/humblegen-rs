@@ -28,12 +28,15 @@ struct Customer {
     bets: map[str][f64]
 }
 
-
+// Enums must be pascal-cased, similar to structs.
 enum Color {
+    // C-style variants are supported.
     Red,
     Blue,
     Green,
+    // Tuple variants can also be used.
     Rgb(u8, u8, u8),
+    // Structs can be written inline into variants, forming struct variants.
     Hsv {
         h: u8,
         s: u8,
