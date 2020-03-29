@@ -24,7 +24,7 @@ built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" }
 list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
 option_type = { "option" ~ open_bracket ~ type_ident ~ close_bracket }
 map_type = { "map" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
-tuple_def = { open_paren ~ type_ident ~ (comma ~ type_ident)* ~ close_paren }
+tuple_def = { open_paren ~ type_ident ~ comma ~ (type_ident ~ (comma ~ type_ident)*)? ~ close_paren }
 
 spec_item = _{ (struct_definition | enum_definition) }
 spec = { (spec_item)* }
