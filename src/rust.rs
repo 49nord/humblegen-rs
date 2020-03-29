@@ -75,7 +75,7 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
         ast::VariantType::Struct(ref fields) => {
             let fields: Vec<_> = fields.iter().map(render_field_node).collect();
 
-            quote!(#ident { #(#fields),* })
+            quote!(#ident { #(#fields),*})
         }
     }
 }
@@ -109,7 +109,11 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
 fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
     let components: Vec<_> = tdef.components().iter().map(render_type_ident).collect();
 
-    quote!((#(#components),*))
+    if components.len() == 1 {
+        quote!((#(#components),*,))
+    } else {
+        quote!((#(#components),*))
+    }
 }
 
 /// Render an atomic type.
