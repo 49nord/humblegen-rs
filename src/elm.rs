@@ -107,6 +107,11 @@ fn render_variant_def(variant: &ast::VariantDef) -> String {
             name = variant.name,
             fields = fields.iter().map(render_struct_field).join(", ")
         ),
+        ast::VariantType::Newtype(ref ty) => format!(
+            "{name} {ty}",
+            name = variant.name,
+            ty = render_type_ident(ty),
+        ),
     }
 }
 
@@ -233,6 +238,11 @@ fn render_variant_decoder(variant: &ast::VariantDef) -> String {
                 })
                 .join(", "),
             field_decoders = fields.iter().map(render_field_decoder).join(" "),
+        ),
+        ast::VariantType::Newtype(ref ty) => format!(
+            "D.map {name} {ty}",
+            name = variant.name,
+            ty = opt_parens(render_type_decoder(ty)),
         ),
     }
 }
@@ -415,6 +425,11 @@ fn render_variant_encoder_branch(variant: &ast::VariantDef) -> String {
             "{name} obj -> E.object [ (\"{name}\", E.object [{fields}]) ]",
             name = variant.name,
             fields = fields.iter().map(render_field_encoder).join(", "),
+        ),
+        ast::VariantType::Newtype(ref ty) => format!(
+            "{name} obj -> E.object [ (\"{name}\", {enc} obj) ]",
+            name = variant.name,
+            enc = render_type_encoder(ty),
         ),
     }
 }

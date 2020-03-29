@@ -77,6 +77,11 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
 
             quote!(#ident { #(#fields),*})
         }
+        ast::VariantType::Newtype(ref ty) => {
+            let inner = render_type_ident(ty);
+
+            quote!(#ident(#inner))
+        }
     }
 }
 

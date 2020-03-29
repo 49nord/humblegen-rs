@@ -85,6 +85,8 @@ pub enum VariantType {
     Tuple(TupleDef),
     /// Struct variant.
     Struct(StructFields),
+    /// Newype variant.
+    Newtype(TypeIdent),
 }
 
 impl VariantDef {
