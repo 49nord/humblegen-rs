@@ -49,6 +49,12 @@ fn parse_enum_variant_def(pair: pest::iterators::Pair<Rule>) -> VariantDef {
                 name,
                 variant_type: VariantType::Tuple(parse_tuple_def(var)),
             },
+            Rule::newtype_def => VariantDef {
+                name,
+                variant_type: VariantType::Newtype(parse_type_ident(
+                    var.into_inner().next().unwrap(),
+                )),
+            },
             _ => unreachable!(dbg!(var)),
         }
     } else {

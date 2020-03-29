@@ -36,6 +36,8 @@ enum Color {
     Green,
     // Tuple variants can also be used.
     Rgb(u8, u8, u8),
+    // Newtype variants get special treatment (compared to 1-component tuples).
+    Named(str),
     // Structs can be written inline into variants, forming struct variants.
     Hsv {
         h: u8,

@@ -17,14 +17,15 @@ struct_field_def = { snake_case_ident ~ colon ~ type_ident }
 enum_definition = _{ "enum" ~ enum_def }
 enum_def = { camel_case_ident ~ open_curly ~ close_curly |
              camel_case_ident ~ open_curly ~ enum_variant_def ~ (comma ~ enum_variant_def)* ~ comma? ~ close_curly }
-enum_variant_def = { camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident }
+enum_variant_def = { camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident ~ newtype_def | camel_case_ident }
 
 type_ident = { built_in_atom | list_type | option_type | map_type | tuple_def | camel_case_ident }
 built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" }
 list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
 option_type = { "option" ~ open_bracket ~ type_ident ~ close_bracket }
 map_type = { "map" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
-tuple_def = { open_paren ~ type_ident ~ (comma ~ type_ident)* ~ close_paren }
+tuple_def = { open_paren ~ type_ident ~ comma ~ (type_ident ~ (comma ~ type_ident)*)? ~ close_paren }
+newtype_def = { open_paren ~ type_ident ~ close_paren }
 
 spec_item = _{ (struct_definition | enum_definition) }
 spec = { (spec_item)* }
