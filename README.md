@@ -20,3 +20,28 @@ Check out [the sample file](sample.humble) for an overview of the format. Then j
 ```
 $ humblegen -l rust myfile.humble
 ```
+
+### As a build dependency
+
+`humblegen` can be used in your `build.rs` directly, this has the advantage of automatically recompiling the Rust program whenever the underlying spec changes. To enable, you should first add `humblegen` to your build dependencies:
+
+```toml
+[build-dependencies]
+humblegen = "*"
+```
+
+(Using `cargo add --build` via [cargo edit](https://crates.io/crates/cargo-edit) is recommended instead)
+
+The, add the following line to `build.rs`:
+
+```rust
+humblegen::build("path/to/spec.humble").expect("compile humble");
+```
+
+Finally, import the module (which in this version of humblegen is always in a file called `protocol.rs`):
+
+```rust
+mod protocol {
+    include!(concat!(env!("OUT_DIR"), "/protocol.rs"));
+}
+```
