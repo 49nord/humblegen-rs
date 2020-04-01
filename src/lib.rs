@@ -1,7 +1,7 @@
 //! Humblegen compiler library
 
 use std::error::Error;
-use std::{fs, path, str};
+use std::{env, fs, path, str};
 
 mod ast;
 mod elm;
@@ -39,7 +39,23 @@ impl str::FromStr for Language {
     }
 }
 
+/// Parse a specification from a file path.
 pub fn parse_spec<P: AsRef<path::Path>>(src: P) -> Result<ast::Spec, Box<dyn Error>> {
     let input = fs::read_to_string(src).map(Box::new)?;
     Ok(parser::parse(&input))
+}
+
+/// Build the specified humblefile using the Rust builder.
+///
+/// Outputs `rerun-if-changed` instructions for the given `src` path.
+pub fn build<P: AsRef<path::Path>>(src: P) -> Result<(), Box<dyn Error>> {
+    let spec = parse_spec(src.as_ref())?;
+    let rendered = Language::Rust.render(&spec);
+
+    let out_dir: path::PathBuf = env::var("OUT_DIR").expect("read OUT_DIR envvar").into();
+    fs::write(out_dir.join("protocol.rs"), rendered.as_bytes()).map(Box::new)?;
+
+    println!("cargo:rerun-if-changed={}", src.as_ref().display());
+
+    Ok(())
 }
