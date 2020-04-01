@@ -142,6 +142,7 @@ fn parse_spec_item(pair: pest::iterators::Pair<Rule>) -> SpecItem {
 
 /// Parse complete spec.
 pub fn parse(input: &str) -> Spec {
+    // TODO: Returns errors proper.
     let humbled = HumbleParser::parse(Rule::doc, input)
         .unwrap()
         .next()
