@@ -129,5 +129,6 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         ast::AtomType::U32 => quote!(u32),
         ast::AtomType::U8 => quote!(u8),
         ast::AtomType::F64 => quote!(f64),
+        ast::AtomType::Bool => quote!(bool),
     }
 }

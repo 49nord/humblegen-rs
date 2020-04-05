@@ -96,6 +96,7 @@ fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
         "u32" => AtomType::U32,
         "u8" => AtomType::U8,
         "f64" => AtomType::F64,
+        "bool" => AtomType::Bool,
         _ => unreachable!(dbg!(pair)),
     }
 }
