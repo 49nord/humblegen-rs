@@ -141,6 +141,8 @@ pub enum AtomType {
     F64,
     /// Boolean value.
     Bool,
+    /// Timestamp with timezone.
+    DateTime,
 }
 
 /// A tuple definition.

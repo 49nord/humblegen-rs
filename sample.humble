@@ -12,6 +12,12 @@ struct Customer {
     // There is only one float type, `f64`.
     net_worth: f64,
 
+    // Timestamps are Iso8601 formatted, but must always be UTC.
+    join_date: datetime,
+
+    // Boolean values are supported.
+    is_vip: bool,
+
     // Enums can be referenced in struct.
     favorite_color: Color,
 

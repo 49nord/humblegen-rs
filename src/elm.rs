@@ -10,8 +10,11 @@ use itertools::Itertools;
 /// the generated code.
 const PREAMBLE: &str = "module Protocol exposing (..)
 import Dict exposing (Dict)
+import Iso8601  -- rtfeldman/elm-iso8601-date-strings
+-- TODO: Do not require `Iso8601`, `Time` import, have humblegen include it only when needed
 import Json.Decode as D
 import Json.Encode as E
+import Time  -- elm/time
 
 required : String -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
 required fieldName itemDecoder functionDecoder =
@@ -148,6 +151,7 @@ fn render_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::U8 => "Int",
         ast::AtomType::F64 => "Float",
         ast::AtomType::Bool => "Bool",
+        ast::AtomType::DateTime => "Time.Posix",
     }
     .to_owned()
 }
@@ -306,6 +310,7 @@ fn render_atom_decoder(atom: &ast::AtomType) -> String {
         ast::AtomType::U8 => "D.int",
         ast::AtomType::F64 => "D.float",
         ast::AtomType::Bool => "D.bool",
+        ast::AtomType::DateTime => "Iso8601.decoder",
     }
     .to_string()
 }
@@ -466,6 +471,7 @@ fn render_atom_encoder(atom: &ast::AtomType) -> String {
         ast::AtomType::U8 => "E.int",
         ast::AtomType::F64 => "E.float",
         ast::AtomType::Bool => "E.bool",
+        ast::AtomType::DateTime => "Iso8601.encode",
     }
     .to_owned()
 }
