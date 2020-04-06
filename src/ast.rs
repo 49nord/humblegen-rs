@@ -139,6 +139,8 @@ pub enum AtomType {
     U8,
     /// 64-bit IEEE floating point number.
     F64,
+    /// Boolean value.
+    Bool,
 }
 
 /// A tuple definition.

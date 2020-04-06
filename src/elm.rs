@@ -147,6 +147,7 @@ fn render_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::U32 => "Int",
         ast::AtomType::U8 => "Int",
         ast::AtomType::F64 => "Float",
+        ast::AtomType::Bool => "Bool",
     }
     .to_owned()
 }
@@ -304,6 +305,7 @@ fn render_atom_decoder(atom: &ast::AtomType) -> String {
         ast::AtomType::U32 => "D.int",
         ast::AtomType::U8 => "D.int",
         ast::AtomType::F64 => "D.float",
+        ast::AtomType::Bool => "D.bool",
     }
     .to_string()
 }
@@ -463,6 +465,7 @@ fn render_atom_encoder(atom: &ast::AtomType) -> String {
         ast::AtomType::U32 => "E.int",
         ast::AtomType::U8 => "E.int",
         ast::AtomType::F64 => "E.float",
+        ast::AtomType::Bool => "E.bool",
     }
     .to_owned()
 }

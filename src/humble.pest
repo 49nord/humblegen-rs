@@ -20,7 +20,7 @@ enum_def = { camel_case_ident ~ open_curly ~ close_curly |
 enum_variant_def = { camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident ~ newtype_def | camel_case_ident }
 
 type_ident = { built_in_atom | list_type | option_type | map_type | tuple_def | camel_case_ident }
-built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" }
+built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" }
 list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
 option_type = { "option" ~ open_bracket ~ type_ident ~ close_bracket }
 map_type = { "map" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
