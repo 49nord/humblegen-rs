@@ -137,12 +137,14 @@ pub enum AtomType {
     U32,
     /// Unsigned 8-bit integer.
     U8,
-    /// 64-bit IEEE floating point number.
+    /// 64-bit IEEE floating-point number.
     F64,
     /// Boolean value.
     Bool,
-    /// Timestamp with timezone.
+    /// Timestamp in UTC time.
     DateTime,
+    /// Date value.
+    Date,
 }
 
 /// A tuple definition.
