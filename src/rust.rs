@@ -131,5 +131,6 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         ast::AtomType::F64 => quote!(f64),
         ast::AtomType::Bool => quote!(bool),
         ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::Offset::Utc>),
+        ast::AtomType::Date => quote!(::chrono::Date),
     }
 }

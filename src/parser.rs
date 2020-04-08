@@ -98,6 +98,7 @@ fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
         "f64" => AtomType::F64,
         "bool" => AtomType::Bool,
         "datetime" => AtomType::DateTime,
+        "date" => AtomType::Date,
         _ => unreachable!(dbg!(pair)),
     }
 }

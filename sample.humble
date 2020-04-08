@@ -15,6 +15,9 @@ struct Customer {
     // Timestamps are Iso8601 formatted, but must always be UTC.
     join_date: datetime,
 
+    // Dates without timestamps can be used as well.
+    birthday: date,
+
     // Boolean values are supported.
     is_vip: bool,
 

@@ -9,6 +9,7 @@ use itertools::Itertools;
 /// The preamble is inserted into every generated Elm module and contains shared functions used by
 /// the generated code.
 const PREAMBLE: &str = "module Protocol exposing (..)
+import Date -- justinmimbs/date
 import Dict exposing (Dict)
 import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 -- TODO: Do not require `Iso8601`, `Time` import, have humblegen include it only when needed
@@ -38,6 +39,23 @@ enumFailDecoder =
 
 encMaybe : (t -> E.Value) -> Maybe t -> E.Value
 encMaybe enc = Maybe.withDefault E.null << Maybe.map enc
+
+dateDecoder : D.Decoder Date.Date
+dateDecoder =
+    D.map Date.fromIsoString D.string
+    |> D.andThen
+        (\\result ->
+            case result of
+                Ok v ->
+                    D.succeed v
+
+                Err errMsg ->
+                    D.fail <| \"not a valid date: \" ++ errMsg
+        )
+
+encDate : Date.Date -> E.Value
+encDate = Date.toIsoString >> E.string
+
 
 \n\n";
 
@@ -152,6 +170,7 @@ fn render_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::F64 => "Float",
         ast::AtomType::Bool => "Bool",
         ast::AtomType::DateTime => "Time.Posix",
+        ast::AtomType::Date => "Date.Date",
     }
     .to_owned()
 }
@@ -311,6 +330,7 @@ fn render_atom_decoder(atom: &ast::AtomType) -> String {
         ast::AtomType::F64 => "D.float",
         ast::AtomType::Bool => "D.bool",
         ast::AtomType::DateTime => "Iso8601.decoder",
+        ast::AtomType::Date => "dateDecoder",
     }
     .to_string()
 }
@@ -472,6 +492,7 @@ fn render_atom_encoder(atom: &ast::AtomType) -> String {
         ast::AtomType::F64 => "E.float",
         ast::AtomType::Bool => "E.bool",
         ast::AtomType::DateTime => "Iso8601.encode",
+        ast::AtomType::Date => "encDate",
     }
     .to_owned()
 }
