@@ -1,5 +1,6 @@
 snake_case_ident = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | "_" | ASCII_DIGIT)* }
 camel_case_ident = @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_LOWER | ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
+
 open_curly = _{ "{" }
 close_curly = _{ "}" }
 open_paren = _{ "(" }
@@ -8,16 +9,21 @@ comma = _{ "," }
 open_bracket = _{ "[" }
 close_bracket = _{ "]" }
 colon = _{ ":" }
+until_eol = { (!"\n" ~ ANY)* }
 
-struct_definition = { "struct" ~ camel_case_ident ~ struct_fields }
+doc_comment_start = _{"///" ~ " "?}
+doc_comment_line = ${ doc_comment_start ~ until_eol ~ "\n" }
+doc_comment = { doc_comment_line+ }
+
+struct_definition = { doc_comment? ~ "struct" ~ camel_case_ident ~ struct_fields }
 struct_fields = { open_curly ~ close_curly |
                   open_curly ~ struct_field_def ~ (comma ~ struct_field_def)* ~ comma? ~ close_curly }
-struct_field_def = { snake_case_ident ~ colon ~ type_ident }
+struct_field_def = { doc_comment? ~ snake_case_ident ~ colon ~ type_ident }
 
-enum_definition = _{ "enum" ~ enum_def }
+enum_definition = { doc_comment? ~ "enum" ~ enum_def }
 enum_def = { camel_case_ident ~ open_curly ~ close_curly |
              camel_case_ident ~ open_curly ~ enum_variant_def ~ (comma ~ enum_variant_def)* ~ comma? ~ close_curly }
-enum_variant_def = { camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident ~ newtype_def | camel_case_ident }
+enum_variant_def = { doc_comment? ~ (camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident ~ newtype_def | camel_case_ident) }
 
 type_ident = { built_in_atom | list_type | option_type | map_type | tuple_def | camel_case_ident }
 built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" | "datetime" | "date" }
@@ -32,4 +38,4 @@ spec = { (spec_item)* }
 doc = _{ SOI ~ spec ~ EOI }
 
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
-COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+COMMENT = _{ !"///" ~ "//" ~ until_eol }

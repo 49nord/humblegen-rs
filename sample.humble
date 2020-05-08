@@ -2,55 +2,79 @@
 
 // Structs must be pascal-cased, but cases will be converted depending in the programming language
 // used to output.
+/// A customer.
+///
+/// Contains the complete profile of a customer.
 struct Customer {
     // Strings are assumed to be UTF8 formatted bytestrings.
+    /// Full name.
     name: str,
 
     // Supported numeric types are `i32`, `u32` and `u8`.
+    /// Customer ID.
     id: i32,
 
     // There is only one float type, `f64`.
+    /// The customer's net worth in dollars.
     net_worth: f64,
 
     // Timestamps are Iso8601 formatted, but must always be UTC.
+    /// Time the customer joined the site.
     join_date: datetime,
 
     // Dates without timestamps can be used as well.
+    /// Date of birth.
     birthday: date,
 
     // Boolean values are supported.
+    /// Is the customer a VIP?
     is_vip: bool,
 
     // Enums can be referenced in struct.
+    /// Favorite color.
     favorite_color: Color,
 
     // Lists are collections of multiple elements of a single other type.
+    /// Codenames, spy aliases for customer.
     aliases: list[str],
 
     // Tuples are supported, but must contain at least two elements.
+    /// Current location in one millionth of a degree lat/lon.
     coords: (i32, i32),
 
     // Optional values are supported and map to each language's native type, if available.
+    /// Primary email.
     email: option[str],
 
     // Maps are supported, but using non-string keys is not allowed.
+    /// List of horses the customer backed in a race, including dollar amounts.
     bets: map[str][f64]
 }
 
+/// A color.
 // Enums must be pascal-cased, similar to structs.
 enum Color {
     // C-style variants are supported.
+    /// Pure red.
     Red,
+    /// Pure blue.
     Blue,
+    /// Pure green.
     Green,
     // Tuple variants can also be used.
+    /// RGB Color.
     Rgb(u8, u8, u8),
     // Newtype variants get special treatment (compared to 1-component tuples).
+    /// Web-color name,
     Named(str),
     // Structs can be written inline into variants, forming struct variants.
+    /// Hue, saturation, value color.
     Hsv {
+        /// Hue.
         h: u8,
+        /// Saturation.
         s: u8,
+        /// Value.
         v: u8,
     }
 }
