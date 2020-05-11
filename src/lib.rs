@@ -39,6 +39,10 @@ impl str::FromStr for Language {
     }
 }
 
+pub fn parse_spec_str_or_panic(src: &str) -> ast::Spec {
+    parser::parse(src)
+}
+
 /// Parse a specification from a file path.
 pub fn parse_spec<P: AsRef<path::Path>>(src: P) -> Result<ast::Spec, Box<dyn Error>> {
     let input = fs::read_to_string(src).map(Box::new)?;
