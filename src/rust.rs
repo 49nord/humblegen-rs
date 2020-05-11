@@ -150,7 +150,9 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         ast::AtomType::U8 => quote!(u8),
         ast::AtomType::F64 => quote!(f64),
         ast::AtomType::Bool => quote!(bool),
-        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::Offset::Utc>),
-        ast::AtomType::Date => quote!(::chrono::Date),
+        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::prelude::Utc>),
+        // chrono::Date doesn't implement serde::Serialize / serde::Deserialize:
+        // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
+        ast::AtomType::Date => quote!(::chrono::NaiveDate),
     }
 }
