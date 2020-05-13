@@ -29,6 +29,8 @@ pub struct StructDef {
     pub name: String,
     /// Fields of the struct.
     pub fields: StructFields,
+    /// Documentation comment.
+    pub doc_comment: Option<String>,
 }
 
 /// Container of struct fields.
@@ -49,6 +51,8 @@ pub struct EnumDef {
     pub name: String,
     /// Container of variants.
     pub variants: Vec<VariantDef>,
+    /// Documentation comment.
+    pub doc_comment: Option<String>,
 }
 
 impl EnumDef {
@@ -74,6 +78,8 @@ pub struct VariantDef {
     pub name: String,
     /// Type of the variant.
     pub variant_type: VariantType,
+    /// Documentation comment.
+    pub doc_comment: Option<String>,
 }
 
 /// An (enum-)variant type.
@@ -107,6 +113,8 @@ pub struct FieldNode {
     pub name: String,
     /// Type of the field.
     pub type_ident: TypeIdent,
+    /// Documentation comment.
+    pub doc_comment: Option<String>,
 }
 
 /// A type identifier.

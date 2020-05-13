@@ -11,6 +11,11 @@ fn fmt_ident(ident: &str) -> proc_macro2::Ident {
     quote::format_ident!("{}", ident)
 }
 
+/// Helper function to format an optional string as a string.
+fn fmt_opt_string(s: &Option<String>) -> &str {
+    s.as_ref().map(|s| s.as_str()).unwrap_or("")
+}
+
 /// Render a spec definition.
 pub fn render(spec: &ast::Spec) -> TokenStream {
     spec.iter()
@@ -24,10 +29,12 @@ pub fn render(spec: &ast::Spec) -> TokenStream {
 /// Render a struct definition.
 fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
+    let doc_comment = fmt_opt_string(&sdef.doc_comment);
     let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
 
     quote!(
         #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+        #[doc = #doc_comment]
         pub struct #ident {
             #(#fields),*
         }
@@ -37,10 +44,13 @@ fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
 /// Render an enum definition.
 fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let ident = fmt_ident(&edef.name);
+    let doc_comment = fmt_opt_string(&edef.doc_comment);
+
     let variants: Vec<_> = edef.variants.iter().map(render_variant).collect();
 
     quote!(
         #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+        #[doc = #doc_comment]
         pub enum #ident {
             #(#variants),*
     })
@@ -58,29 +68,39 @@ fn render_field_node(field: &ast::FieldNode) -> TokenStream {
 /// Even though all fields are pub in generated code, fields in a `pub enum` cannot carry an
 /// additional `pub` qualifier.
 fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
+    let doc_comment = fmt_opt_string(&field.doc_comment);
     let field = render_field_node(field);
-    quote!(pub #field)
+
+    quote!(#[doc = #doc_comment] pub #field)
 }
 
 /// Render an enum variant.
 fn render_variant(variant: &ast::VariantDef) -> TokenStream {
+    let doc_comment = fmt_opt_string(&variant.doc_comment);
     let ident = fmt_ident(&variant.name);
 
     match variant.variant_type {
-        ast::VariantType::Simple => quote!(#ident),
+        ast::VariantType::Simple => quote!(#[doc = #doc_comment] #ident),
         ast::VariantType::Tuple(ref inner) => {
             let tuple = render_tuple_def(inner);
-            quote!(#ident #tuple)
+            quote!(#[doc = #doc_comment] #ident #tuple)
         }
         ast::VariantType::Struct(ref fields) => {
-            let fields: Vec<_> = fields.iter().map(render_field_node).collect();
+            let fields: Vec<_> = fields
+                .iter()
+                .map(|field| {
+                    let doc_comment = fmt_opt_string(&field.doc_comment);
+                    let fld = render_field_node(field);
+                    quote!(#[doc = #doc_comment] #fld)
+                })
+                .collect();
 
-            quote!(#ident { #(#fields),*})
+            quote!(#[doc = #doc_comment] #ident { #(#fields),*})
         }
         ast::VariantType::Newtype(ref ty) => {
             let inner = render_type_ident(ty);
 
-            quote!(#ident(#inner))
+            quote!(#[doc = #doc_comment] #ident(#inner))
         }
     }
 }
@@ -130,7 +150,9 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         ast::AtomType::U8 => quote!(u8),
         ast::AtomType::F64 => quote!(f64),
         ast::AtomType::Bool => quote!(bool),
-        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::Offset::Utc>),
-        ast::AtomType::Date => quote!(::chrono::Date),
+        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::prelude::Utc>),
+        // chrono::Date doesn't implement serde::Serialize / serde::Deserialize:
+        // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
+        ast::AtomType::Date => quote!(::chrono::NaiveDate),
     }
 }
