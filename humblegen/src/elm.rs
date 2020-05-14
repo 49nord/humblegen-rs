@@ -180,6 +180,7 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
         ast::TypeIdent::List(inner) => format!("List {}", opt_parens(render_type_ident(inner))),
         ast::TypeIdent::Option(inner) => format!("Maybe {}", opt_parens(render_type_ident(inner))),
+        ast::TypeIdent::Result(_okk, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => format!(
             "Dict {} {}",
             opt_parens(render_type_ident(key)),
@@ -316,7 +317,8 @@ fn render_type_decoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::List(inner) => format!("D.list {}", opt_parens(render_type_decoder(inner))),
         ast::TypeIdent::Option(inner) => {
             format!("D.maybe {}", opt_parens(render_type_decoder(inner)))
-        }
+        },
+        ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(
                 render_type_decoder(key),
@@ -506,7 +508,8 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::List(inner) => format!("E.list {}", opt_parens(render_type_encoder(inner))),
         ast::TypeIdent::Option(inner) => {
             format!("encMaybe {}", opt_parens(render_type_encoder(inner)))
-        }
+        },
+        ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(
                 render_type_encoder(key),

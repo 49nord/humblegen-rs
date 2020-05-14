@@ -126,6 +126,8 @@ pub enum TypeIdent {
     List(Box<TypeIdent>),
     /// `option[T]`
     Option(Box<TypeIdent>),
+    /// `result[T]`
+    Result(Box<TypeIdent>, Box<TypeIdent>),
     /// `map[t][u]`
     Map(Box<TypeIdent>, Box<TypeIdent>),
     /// Tuple type.

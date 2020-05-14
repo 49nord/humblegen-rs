@@ -117,6 +117,11 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
             let inner_ty = render_type_ident(inner);
             quote!(Option<#inner_ty>)
         }
+        ast::TypeIdent::Result(ok, err) => {
+            let ok_ty = render_type_ident(ok);
+            let err_ty = render_type_ident(err);
+            quote!(Result<#ok_ty, #err_ty>)
+        }
         ast::TypeIdent::Map(key, value) => {
             let key_ty = render_type_ident(key);
             let value_ty = render_type_ident(value);

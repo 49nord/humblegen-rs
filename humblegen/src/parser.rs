@@ -131,6 +131,7 @@ fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
         Rule::built_in_atom => TypeIdent::BuiltIn(parse_built_in_atom(inner)),
         Rule::list_type => parse_list_type(inner),
         Rule::option_type => parse_option_type(inner),
+        Rule::result_type => parse_result_type(inner),
         Rule::map_type => parse_map_type(inner),
         Rule::tuple_def => TypeIdent::Tuple(parse_tuple_def(inner)),
         Rule::camel_case_ident => TypeIdent::UserDefined(inner.as_span().as_str().to_string()),
@@ -165,6 +166,18 @@ fn parse_option_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().next().unwrap();
 
     TypeIdent::Option(Box::new(parse_type_ident(inner)))
+}
+
+/// Parse a result type.
+fn parse_result_type(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
+    let mut tokens = pair.into_inner();
+    let ok = tokens.next().unwrap();
+    let err = tokens.next().unwrap();
+    assert_eq!(tokens.next(), None);
+    TypeIdent::Result(
+        Box::new(parse_type_ident(ok)),
+        Box::new(parse_type_ident(err)),
+    )
 }
 
 /// Parse a map type.
