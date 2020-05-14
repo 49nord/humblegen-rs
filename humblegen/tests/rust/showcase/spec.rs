@@ -8,9 +8,9 @@ pub struct Customer {
     #[doc = "The customer's net worth in dollars."]
     pub net_worth: f64,
     #[doc = "Time the customer joined the site."]
-    pub join_date: ::chrono::DateTime<::chrono::prelude::Utc>,
+    pub join_date: ::humblegen_rt::chrono::DateTime<::humblegen_rt::chrono::prelude::Utc>,
     #[doc = "Date of birth."]
-    pub birthday: ::chrono::NaiveDate,
+    pub birthday: ::humblegen_rt::chrono::NaiveDate,
     #[doc = "Is the customer a VIP?"]
     pub is_vip: bool,
     #[doc = "Favorite color."]

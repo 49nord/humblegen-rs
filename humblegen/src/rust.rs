@@ -1,6 +1,7 @@
 //! Rust code generator.
 
 pub(crate) mod rustfmt;
+mod service_server;
 
 use crate::ast;
 use proc_macro2::TokenStream;
@@ -20,12 +21,19 @@ fn fmt_opt_string(s: &Option<String>) -> &str {
 
 /// Render a spec definition.
 pub fn render(spec: &ast::Spec) -> TokenStream {
-    spec.iter()
-        .flat_map(|spec_item| match spec_item {
-            ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
-            ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
-        })
-        .collect()
+    let mut out = TokenStream::new();
+
+    out.extend(spec.iter().flat_map(|spec_item| match spec_item {
+        ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
+        ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+        ast::SpecItem::ServiceDef(_) => quote! {}, // done below
+    }));
+
+    out.extend(service_server::render_services(
+        spec.iter().filter_map(|si| si.service_def()),
+    ));
+
+    out
 }
 
 /// Render a struct definition.
@@ -158,9 +166,11 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         ast::AtomType::U8 => quote!(u8),
         ast::AtomType::F64 => quote!(f64),
         ast::AtomType::Bool => quote!(bool),
-        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::prelude::Utc>),
+        ast::AtomType::DateTime => {
+            quote!(::humblegen_rt::chrono::DateTime::<::humblegen_rt::chrono::prelude::Utc>)
+        }
         // chrono::Date doesn't implement serde::Serialize / serde::Deserialize:
         // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
-        ast::AtomType::Date => quote!(::chrono::NaiveDate),
+        ast::AtomType::Date => quote!(::humblegen_rt::chrono::NaiveDate),
     }
 }

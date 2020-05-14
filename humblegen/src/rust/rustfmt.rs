@@ -2,6 +2,7 @@
 
 /// The code in this file is based on
 ///     https://docs.rs/bindgen/0.51.1/src/bindgen/lib.rs.html#1945
+use proc_macro2::TokenStream;
 use std::borrow::Cow;
 use std::io;
 use std::io::prelude::*;
@@ -74,4 +75,11 @@ pub(crate) fn rustfmt_2018_generated_string<'a>(source: &'a str) -> io::Result<C
         },
         _ => Ok(Cow::Owned(source)),
     }
+}
+
+pub(crate) fn try_rustfmt_2018_token_stream(ts: &TokenStream) -> String {
+    let s = format!("{}", ts);
+    rustfmt_2018_generated_string(&s)
+        .map(|f| f.into_owned())
+        .unwrap_or(s)
 }

@@ -24,8 +24,6 @@ pub(crate) fn parse(input: &str) -> Result<Spec, pest::error::Error<Rule>> {
     // AST transformations
     embeds::resolve_embeds(&mut ast);
 
-    // TODO: type checks
-
     Ok(ast)
 }
 
@@ -173,6 +171,105 @@ fn parse_struct_field_def_node(pair: pest::iterators::Pair<Rule>) -> FieldNode {
     FieldNode { pair, doc_comment }
 }
 
+fn parse_service_definition(pair: pest::iterators::Pair<Rule>) -> ServiceDef {
+    let mut nodes = pair.into_inner();
+    let doc_comment = parse_doc_comment(&mut nodes);
+    let name = nodes.next().unwrap().as_span().as_str().to_string();
+    let endpoints = nodes
+        .next()
+        .unwrap()
+        .into_inner()
+        .map(parse_service_rule)
+        .collect();
+    assert_eq!(nodes.next(), None);
+    ServiceDef {
+        doc_comment,
+        name,
+        endpoints,
+    }
+}
+
+fn parse_service_rule(pair: pest::iterators::Pair<Rule>) -> ServiceEndpoint {
+    let mut nodes = pair.into_inner();
+    let doc_comment = parse_doc_comment(&mut nodes);
+    let route = parse_service_rule_def(nodes.next().unwrap());
+    assert_eq!(nodes.next(), None);
+    ServiceEndpoint { doc_comment, route }
+}
+
+fn parse_service_rule_def(pair: pest::iterators::Pair<Rule>) -> ServiceRoute {
+    let mut nodes = pair.into_inner();
+    let parser = match nodes.peek().unwrap().as_rule() {
+        Rule::http_get => parse_service_rule_get,
+        Rule::http_delete => parse_service_rule_delete,
+        Rule::http_post => parse_service_rule_post,
+        x => panic!("unexpected token {:?}", x),
+    };
+    nodes.next().unwrap(); // consume what we peeked
+    let route = parser(&mut nodes);
+    assert_eq!(nodes.next(), None);
+    route
+}
+
+fn parse_service_rule_get(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
+    ServiceRoute::Get {
+        components: parse_http_route(pair.next().unwrap()),
+        query: parse_http_query(pair),
+        ret: parse_type_ident(pair.next().unwrap()),
+    }
+}
+
+fn parse_service_rule_delete(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
+    ServiceRoute::Delete {
+        components: parse_http_route(pair.next().unwrap()),
+        query: parse_http_query(pair),
+        ret: parse_type_ident(pair.next().unwrap()),
+    }
+}
+
+fn parse_service_rule_post(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
+    ServiceRoute::Post {
+        components: parse_http_route(pair.next().unwrap()),
+        query: parse_http_query(pair),
+        body: parse_type_ident(pair.next().unwrap()),
+        ret: parse_type_ident(pair.next().unwrap()),
+    }
+}
+
+fn parse_http_route(pair: pest::iterators::Pair<Rule>) -> Vec<ServiceRouteComponent> {
+    pair.into_inner().map(parse_http_route_segment).collect()
+}
+
+fn parse_http_route_segment(pair: pest::iterators::Pair<Rule>) -> ServiceRouteComponent {
+    let mut nodes = pair.into_inner();
+    let comp = nodes.next().unwrap();
+    match comp.as_rule() {
+        Rule::kebab_case_ident => {
+            ServiceRouteComponent::Literal(comp.as_span().as_str().to_string())
+        }
+        Rule::http_route_segment_arg => {
+            let mut nodes = comp.into_inner();
+            let ret =
+                ServiceRouteComponent::Variable(parse_struct_field_def_pair(nodes.next().unwrap()));
+            assert_eq!(nodes.next(), None);
+            ret
+        }
+        x => panic!("unexpected token {:?}", x),
+    }
+}
+
+fn parse_http_query(pairs: &mut pest::iterators::Pairs<Rule>) -> Option<TypeIdent> {
+    let next_peek = pairs.peek()?;
+    if next_peek.as_rule() != Rule::http_query {
+        return None;
+    }
+    let next = pairs.next().unwrap(); // consume
+    let mut tokens = next.into_inner();
+    let ret = Some(parse_type_ident(tokens.next().unwrap()));
+    assert_eq!(tokens.next(), None);
+    ret
+}
+
 /// Parse type identifier.
 fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
     let inner = pair.into_inner().next().unwrap();
@@ -252,6 +349,7 @@ fn parse_spec_item(pair: pest::iterators::Pair<Rule>) -> SpecItem {
     match pair.as_rule() {
         Rule::struct_definition => SpecItem::StructDef(parse_struct_definition(pair)),
         Rule::enum_definition => SpecItem::EnumDef(parse_enum_definition(pair)),
+        Rule::service_definition => SpecItem::ServiceDef(parse_service_definition(pair)),
         _ => unreachable!(dbg!(pair)),
     }
 }

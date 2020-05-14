@@ -5,7 +5,10 @@
 * Support Rust and Elm.
 * Use JSON on the wire.
 * As indistinguishable from hand-written serialization code as possible.
-* No runtime library required for the generated code.
+
+## Full Example Project
+
+See `./example`.
 
 ## Usage
 
@@ -15,10 +18,19 @@ You can compile and install `humblegen` directly from github:
 $ cargo install --git https://github.com/mbr/humblegen-rs
 ```
 
-Check out `tests/rust/showcase/spec.humble` for an overview of the format. Then just run:
+Check out `generator/tests/rust/showcase/spec.humble` for an overview of the format. Then just run:
 
 ```
 $ humblegen -l rust myfile.humble
+```
+
+Wherever you use the generated code, put the following into `Cargo.toml`:
+
+```toml
+[dependencies]
+humblegen-rt = ...TODO:publish_to_crates.io...
+serde = { version = "1.0.110", features = [ "derive" ] }
+tokio = { version = "0.2.20", features = ["rt-threaded", "tcp", "macros"] }
 ```
 
 ### As a build dependency

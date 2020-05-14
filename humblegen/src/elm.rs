@@ -101,6 +101,7 @@ fn render_def(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -223,6 +224,7 @@ fn render_decoders(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_decoder(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_decoder(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -403,6 +405,7 @@ fn render_helpers(spec: &ast::Spec) -> String {
             // No helpers for structs.
             ast::SpecItem::StructDef(_) => "".to_string(),
             ast::SpecItem::EnumDef(edef) => render_enum_helpers(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -435,6 +438,7 @@ fn render_encoders(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_encoder(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_encoder(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }

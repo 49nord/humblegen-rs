@@ -1,0 +1,3 @@
+[submodule "async-trait-with-sync"]
+	path = async-trait-with-sync
+	url = https://github.com/49nord/async-trait.git

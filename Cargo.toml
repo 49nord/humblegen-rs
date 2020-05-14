@@ -1,2 +1,4 @@
 [workspace]
-members = [ "humblegen" ]
+members = [ "humblegen", "humblegen-rt"]
+# separate project in order to isolate dependencies and README.md instructions
+exclude = [ "async-trait-with-sync", "example" ]

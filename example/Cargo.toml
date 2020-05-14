@@ -1,0 +1,17 @@
+[package]
+name = "humblegen-example-project"
+version = "0.1.0"
+authors = [
+    "Marc Brinkmann <git@marcbrinkmann.de>",
+    "Christian Schwarz <me@cschwarz.com>",
+]
+edition = "2018"
+description = "Full example of how humblegen is intended to be used in a Rust project."
+
+[dependencies]
+humblegen-rt = { path = "../humblegen-rt" }
+serde = { version = "1.0.110", features = [ "derive" ] }
+tokio = { version = "0.2.20", features = ["rt-threaded", "tcp", "macros"] }
+
+[build-dependencies]
+humblegen = { path = "../humblegen" }
