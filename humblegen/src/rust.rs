@@ -57,9 +57,9 @@ fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
 }
 
 /// Render a field node.
-fn render_field_node(field: &ast::FieldNode) -> TokenStream {
-    let ident = fmt_ident(&field.name);
-    let ty = render_type_ident(&field.type_ident);
+fn render_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
+    let ident = fmt_ident(&pair.name);
+    let ty = render_type_ident(&pair.type_ident);
     quote!(#ident: #ty)
 }
 
@@ -69,7 +69,7 @@ fn render_field_node(field: &ast::FieldNode) -> TokenStream {
 /// additional `pub` qualifier.
 fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
     let doc_comment = fmt_opt_string(&field.doc_comment);
-    let field = render_field_node(field);
+    let field = render_field_def_pair(&field.pair);
 
     quote!(#[doc = #doc_comment] pub #field)
 }
@@ -90,7 +90,7 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
                 .iter()
                 .map(|field| {
                     let doc_comment = fmt_opt_string(&field.doc_comment);
-                    let fld = render_field_node(field);
+                    let fld = render_field_def_pair(&field.pair);
                     quote!(#[doc = #doc_comment] #fld)
                 })
                 .collect();

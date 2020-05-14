@@ -18,7 +18,11 @@ doc_comment = { doc_comment_line+ }
 struct_definition = { doc_comment? ~ "struct" ~ camel_case_ident ~ struct_fields }
 struct_fields = { open_curly ~ close_curly |
                   open_curly ~ struct_field_def ~ (comma ~ struct_field_def)* ~ comma? ~ close_curly }
-struct_field_def = { doc_comment? ~ snake_case_ident ~ colon ~ type_ident }
+struct_embeds = { ":" ~ camel_case_ident+ }
+struct_field_def = { struct_field_def_node | struct_field_def_embed }
+struct_field_def_embed = { ".." ~ type_ident }
+struct_field_def_node  = { doc_comment? ~  struct_field_def_pair }
+struct_field_def_pair = { snake_case_ident ~ colon ~ type_ident }
 
 enum_definition = { doc_comment? ~ "enum" ~ enum_def }
 enum_def = { camel_case_ident ~ open_curly ~ close_curly |

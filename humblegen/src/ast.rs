@@ -11,6 +11,11 @@ impl Spec {
     pub fn iter(&self) -> impl Iterator<Item = &SpecItem> {
         self.0.iter()
     }
+
+    /// Mutable iterator over items in spec.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut SpecItem> {
+        self.0.iter_mut()
+    }
 }
 
 /// A Spec item node.
@@ -107,18 +112,43 @@ impl VariantDef {
 }
 
 /// A field node (field definition inside struct).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldNode {
-    /// Name of the field.
-    pub name: String,
-    /// Type of the field.
-    pub type_ident: TypeIdent,
+    pub pair: FieldDefPair,
     /// Documentation comment.
     pub doc_comment: Option<String>,
 }
 
+impl TypeIdent {
+    pub fn user_defined(&self) -> Option<&String> {
+        match self {
+            TypeIdent::UserDefined(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldDefPair {
+    /// Name of the field.
+    pub name: String,
+    /// Type of the field.
+    pub type_ident: TypeIdent,
+}
+
+impl FieldDefPair {
+    /// Whether the given FieldDefPair is a humblespec embed
+    /// (only valid if it is within a struct's `FieldNode`).
+    pub fn is_embed(&self) -> bool {
+        self.type_ident
+            .user_defined()
+            .map(|ident_name| &self.name == ident_name)
+            .unwrap_or(false)
+    }
+}
+
 /// A type identifier.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypeIdent {
     /// Built-in (atomic) type.
     BuiltIn(AtomType),
@@ -137,7 +167,7 @@ pub enum TypeIdent {
 }
 
 /// An atomic type.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AtomType {
     /// String.
     Str,
@@ -158,7 +188,7 @@ pub enum AtomType {
 }
 
 /// A tuple definition.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TupleDef(pub Vec<TypeIdent>);
 
 impl TupleDef {

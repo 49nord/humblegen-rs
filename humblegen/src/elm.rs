@@ -131,8 +131,8 @@ fn render_enum_def(edef: &ast::EnumDef) -> String {
 fn render_struct_field(field: &ast::FieldNode) -> String {
     format!(
         "{name}: {ty}",
-        name = field_name(&field.name),
-        ty = render_type_ident(&field.type_ident)
+        name = field_name(&field.pair.name),
+        ty = render_type_ident(&field.pair.type_ident)
     )
 }
 
@@ -275,8 +275,8 @@ fn render_enum_decoder(edef: &ast::EnumDef) -> String {
 fn render_field_decoder(field: &ast::FieldNode) -> String {
     format!(
         "|> required \"{name}\" {decoder}",
-        name = field.name,
-        decoder = opt_parens(render_type_decoder(&field.type_ident)),
+        name = field.pair.name,
+        decoder = opt_parens(render_type_decoder(&field.pair.type_ident)),
     )
 }
 
@@ -297,7 +297,11 @@ fn render_variant_decoder(variant: &ast::VariantDef) -> String {
                 .iter()
                 .enumerate()
                 .map(|(idx, field)| {
-                    format!("{name} = x{arg}", name = field_name(&field.name), arg = idx)
+                    format!(
+                        "{name} = x{arg}",
+                        name = field_name(&field.pair.name),
+                        arg = idx
+                    )
                 })
                 .join(", "),
             field_decoders = fields.iter().map(render_field_decoder).join(" "),
@@ -317,7 +321,7 @@ fn render_type_decoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::List(inner) => format!("D.list {}", opt_parens(render_type_decoder(inner))),
         ast::TypeIdent::Option(inner) => {
             format!("D.maybe {}", opt_parens(render_type_decoder(inner)))
-        },
+        }
         ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(
@@ -465,9 +469,9 @@ fn render_enum_encoder(edef: &ast::EnumDef) -> String {
 fn render_field_encoder(field: &ast::FieldNode) -> String {
     format!(
         "(\"{name}\", {value_encoder} obj.{field_name})",
-        name = field.name,
-        field_name = field_name(&field.name),
-        value_encoder = opt_parens(render_type_encoder(&field.type_ident))
+        name = field.pair.name,
+        field_name = field_name(&field.pair.name),
+        value_encoder = opt_parens(render_type_encoder(&field.pair.type_ident))
     )
 }
 
@@ -508,7 +512,7 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::List(inner) => format!("E.list {}", opt_parens(render_type_encoder(inner))),
         ast::TypeIdent::Option(inner) => {
             format!("encMaybe {}", opt_parens(render_type_encoder(inner)))
-        },
+        }
         ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(

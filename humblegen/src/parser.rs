@@ -1,5 +1,7 @@
 //! The humble language parser.
 
+mod embeds;
+
 use itertools::Itertools;
 use pest::Parser;
 use pest_derive::Parser;
@@ -7,15 +9,24 @@ use pest_derive::Parser;
 /// The humble language parser, derived from the PEST grammar file.
 #[derive(Parser)]
 #[grammar = "humble.pest"]
-pub struct HumbleParser;
+struct HumbleParser;
 
 use crate::ast::*;
 
 /// Parse complete spec.
 pub(crate) fn parse(input: &str) -> Result<Spec, pest::error::Error<Rule>> {
-    // TODO: Returns errors proper.
-    let humbled = HumbleParser::parse(Rule::doc, input)?.next().expect("TODO when does this happen?");
-    Ok(Spec(humbled.into_inner().map(parse_spec_item).collect()))
+    let humbled = HumbleParser::parse(Rule::doc, input)?
+        .next()
+        .expect("grammar requires non-empty document");
+
+    let mut ast = Spec(humbled.into_inner().map(parse_spec_item).collect());
+
+    // AST transformations
+    embeds::resolve_embeds(&mut ast);
+
+    // TODO: type checks
+
+    Ok(ast)
 }
 
 /// Parse a doc comment.
@@ -55,7 +66,41 @@ fn parse_struct_definition(pair: pest::iterators::Pair<Rule>) -> StructDef {
 
 /// Parse inner struct fields of struct definition.
 fn parse_struct_fields(pair: pest::iterators::Pair<Rule>) -> StructFields {
-    let fields: Vec<_> = pair.into_inner().map(parse_struct_field_def).collect();
+    let pair = pair;
+    let fields: Vec<_> = pair
+        .into_inner()
+        .map(|p| {
+            assert_eq!(p.as_rule(), Rule::struct_field_def);
+            let mut nodes = p.into_inner();
+            let struct_field_def = nodes.next().unwrap();
+            assert_eq!(nodes.next(), None);
+            match struct_field_def.as_rule() {
+                Rule::struct_field_def_node => {
+                    // let mut nodes = struct_field_def.into_inner();
+                    // let field_def_node = nodes.next().unwrap();
+                    // assert_eq!(nodes.next(), None);
+                    parse_struct_field_def_node(struct_field_def)
+                }
+                Rule::struct_field_def_embed => {
+                    // the grammar guarantees that struct field names are snake_case
+                    // and that struct type names are PascalCase
+                    // => a struct type name is never a valid field name
+                    // ==> for embeds, use the struct type name as field name and do the fixup in spec_resolve_embeds
+                    let mut nodes = struct_field_def.into_inner();
+                    let ty = nodes.next().unwrap();
+                    assert_eq!(nodes.next(), None);
+                    FieldNode {
+                        doc_comment: None,
+                        pair: FieldDefPair {
+                            name: ty.as_span().as_str().to_string(),
+                            type_ident: parse_type_ident(ty),
+                        },
+                    }
+                }
+                x => panic!("unexpected token {:?}", x),
+            }
+        })
+        .collect();
     StructFields(fields)
 }
 
@@ -110,18 +155,22 @@ fn parse_enum_variant_def(pair: pest::iterators::Pair<Rule>) -> VariantDef {
     }
 }
 
-/// Parse field definitions in struct.
-fn parse_struct_field_def(pair: pest::iterators::Pair<Rule>) -> FieldNode {
+fn parse_struct_field_def_pair(pair: pest::iterators::Pair<Rule>) -> FieldDefPair {
+    let pair = pair;
     let mut nodes = pair.into_inner();
-    let doc_comment = parse_doc_comment(&mut nodes);
     let name = nodes.next().unwrap().as_span().as_str().to_string();
     let type_ident = parse_type_ident(nodes.next().unwrap());
+    assert_eq!(nodes.next(), None);
+    FieldDefPair { name, type_ident }
+}
 
-    FieldNode {
-        name,
-        type_ident,
-        doc_comment,
-    }
+/// Parse field definitions in struct.
+fn parse_struct_field_def_node(pair: pest::iterators::Pair<Rule>) -> FieldNode {
+    let pair = pair;
+    let mut nodes = pair.into_inner();
+    let doc_comment = parse_doc_comment(&mut nodes);
+    let pair = parse_struct_field_def_pair(nodes.next().unwrap());
+    FieldNode { pair, doc_comment }
 }
 
 /// Parse type identifier.
