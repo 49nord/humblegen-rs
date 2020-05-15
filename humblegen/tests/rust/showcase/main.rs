@@ -27,13 +27,10 @@ fn main() {
     let serialized = serde_json::to_string(&customer).expect("serialize customer");
     let deserialized: Customer = serde_json::from_str(&serialized).expect("deserialize customer");
 
-    // FIXME use assert_eq on struct once we auto-derive PartialEq for structs
-
     assert_eq!(customer.name, deserialized.name);
     assert_eq!(customer.id, deserialized.id);
     assert_eq!(customer.net_worth, deserialized.net_worth);
     assert_eq!(customer.is_vip, deserialized.is_vip);
-    // assert_eq!(customer.favorite_color, deserialized.favorite_color); FIXME need dervice PartialEq on generated enums
     assert_eq!(customer.aliases, deserialized.aliases);
     assert_eq!(customer.coords, deserialized.coords);
     assert_eq!(customer.email, deserialized.email);
