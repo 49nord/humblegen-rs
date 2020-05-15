@@ -15,7 +15,7 @@ You can compile and install `humblegen` directly from github:
 $ cargo install --git https://github.com/mbr/humblegen-rs
 ```
 
-Check out [the sample file](sample.humble) for an overview of the format. Then just run:
+Check out `tests/rust/showcase/spec.humble` for an overview of the format. Then just run:
 
 ```
 $ humblegen -l rust myfile.humble
