@@ -16,9 +16,9 @@ proc-macro2 = "1.0.8"
 quote = "1.0.3"
 
 [dev-dependencies]
+anyhow = "1.0.28"
 trybuild = "1.0.27"
 tempfile = "3.1.0"
-anyhow = "1.0.28"
 
 # the following crates are required by the generated code
 # (this is the authoritative source for generated-code's dependencies)
