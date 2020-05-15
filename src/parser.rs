@@ -11,13 +11,6 @@ pub struct HumbleParser;
 
 use crate::ast::*;
 
-/// Parse complete spec.
-pub(crate) fn parse(input: &str) -> Result<Spec, pest::error::Error<Rule>> {
-    // TODO: Returns errors proper.
-    let humbled = HumbleParser::parse(Rule::doc, input)?.next().expect("TODO when does this happen?");
-    Ok(Spec(humbled.into_inner().map(parse_spec_item).collect()))
-}
-
 /// Parse a doc comment.
 ///
 /// Will peek at the `pairs` to see if the next item is a doc comment. If it is, remove it and
@@ -191,4 +184,15 @@ fn parse_spec_item(pair: pest::iterators::Pair<Rule>) -> SpecItem {
         Rule::enum_definition => SpecItem::EnumDef(parse_enum_definition(pair)),
         _ => unreachable!(dbg!(pair)),
     }
+}
+
+/// Parse complete spec.
+pub fn parse(input: &str) -> Spec {
+    // TODO: Returns errors proper.
+    let humbled = HumbleParser::parse(Rule::doc, input)
+        .unwrap()
+        .next()
+        .unwrap();
+
+    Spec(humbled.into_inner().map(parse_spec_item).collect())
 }
