@@ -202,6 +202,7 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> String {
 /// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "String",
         ast::AtomType::I32 => "Int",
         ast::AtomType::U32 => "Int",
@@ -367,6 +368,7 @@ fn render_components_by_index_pipeline(tdef: &ast::TupleDef) -> String {
 /// Render a decoder for an atomic type.
 fn render_atom_decoder(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "D.string",
         ast::AtomType::I32 => "D.int",
         ast::AtomType::U32 => "D.int",
@@ -530,6 +532,7 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
 /// Render an atomic type encoder.
 fn render_atom_encoder(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "E.string",
         ast::AtomType::I32 => "E.int",
         ast::AtomType::U32 => "E.int",

@@ -149,6 +149,7 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
 /// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> TokenStream {
     match atom {
+        ast::AtomType::Empty => quote!(()),
         ast::AtomType::Str => quote!(String),
         ast::AtomType::I32 => quote!(i32),
         ast::AtomType::U32 => quote!(u32),

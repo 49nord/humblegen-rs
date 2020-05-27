@@ -169,6 +169,8 @@ pub enum TypeIdent {
 /// An atomic type.
 #[derive(Debug, Clone)]
 pub enum AtomType {
+    /// Empty type
+    Empty,
     /// String.
     Str,
     /// Signed 32-bit integer.

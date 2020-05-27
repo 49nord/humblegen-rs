@@ -48,7 +48,10 @@ struct Customer {
 
     // Maps are supported, but using non-string keys is not allowed.
     /// List of horses the customer backed in a race, including dollar amounts.
-    bets: map[str][f64]
+    bets: map[str][f64],
+
+    /// The empty type is supported
+    empty: (),
 }
 
 /// A color.

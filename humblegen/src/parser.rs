@@ -191,6 +191,7 @@ fn parse_type_ident(pair: pest::iterators::Pair<Rule>) -> TypeIdent {
 /// Parse a built-in atomic type.
 fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
     match pair.as_span().as_str() {
+        "()" => AtomType::Empty,
         "str" => AtomType::Str,
         "i32" => AtomType::I32,
         "u32" => AtomType::U32,

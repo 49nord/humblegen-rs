@@ -22,6 +22,7 @@ fn main() {
                 .into_iter()
                 .map(|(k, v)| (k.to_owned(), v)),
         ),
+        empty: (),
     };
 
     let serialized = serde_json::to_string(&customer).expect("serialize customer");
