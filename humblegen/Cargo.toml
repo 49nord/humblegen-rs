@@ -10,10 +10,12 @@ description = "An experimental code-generator in the vain of protobuf, but a lit
 Inflector = "0.11.4"
 argh = "0.1.3"
 itertools = "0.8.2"
+log = "0.4"
 pest = "2.1.3"
 pest_derive = "2.1.0"
 proc-macro2 = "1.0.8"
 quote = "1.0.3"
+which = { version = "3", optional = true }
 
 [dev-dependencies]
 trybuild = "1.0.27"
@@ -22,8 +24,12 @@ anyhow = "1.0.28"
 
 # the following crates are required by the generated code
 # (this is the authoritative source for generated-code's dependencies)
-serde = { version = "1.0.110", features = [ "derive" ] }
 chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0.110", features = [ "derive" ] }
 
 # the following crates are used by integration tests
 serde_json = "1.0"
+
+[features]
+default = [ "which-rustfmt" ]
+which-rustfmt = [ "which" ]

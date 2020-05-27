@@ -15,7 +15,6 @@ impl RustTestCase {
         let spec_file = std::fs::File::open(&self.humble_spec).expect("open humble spec file");
         let spec = humblegen::parse(spec_file).expect("parse humble spec file");
         let spec_rust = humblegen::Language::Rust.render(&spec).to_string();
-        // TODO rustfmt
         std::fs::write(&self.humble_rust_out, spec_rust).expect("write generated rust code");
 
         let t = trybuild::TestCases::new();

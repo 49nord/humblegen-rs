@@ -1,5 +1,7 @@
 //! Rust code generator.
 
+pub(crate) mod rustfmt;
+
 use crate::ast;
 use proc_macro2::TokenStream;
 use quote::quote;
