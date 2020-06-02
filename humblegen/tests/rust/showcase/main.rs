@@ -1,3 +1,4 @@
+
 include!("spec.rs");
 
 use std::iter::FromIterator;
@@ -7,8 +8,10 @@ fn main() {
         name: "somename".to_owned(),
         id: -23,
         net_worth: 0.123456,
-        join_date: ::chrono::prelude::Utc::now(),
-        birthday: ::chrono::prelude::Utc::now().naive_utc().date(),
+        join_date: ::humblegen_rt::chrono::prelude::Utc::now(),
+        birthday: ::humblegen_rt::chrono::prelude::Utc::now()
+            .naive_utc()
+            .date(),
         is_vip: true,
         favorite_color: Color::Blue,
         aliases: vec!["SomeName", "Some Name"]
@@ -22,6 +25,7 @@ fn main() {
                 .into_iter()
                 .map(|(k, v)| (k.to_owned(), v)),
         ),
+        empty: (),
     };
 
     let serialized = serde_json::to_string(&customer).expect("serialize customer");

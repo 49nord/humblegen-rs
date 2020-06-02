@@ -21,7 +21,13 @@ impl Language {
     /// Render output for spec.
     pub fn render(self, spec: &ast::Spec) -> String {
         match self {
-            Language::Rust => rust::render(&spec).to_string(),
+            Language::Rust => {
+                let src = rust::render(&spec).to_string();
+                rust::rustfmt::rustfmt_2018_generated_string(&src)
+                    .map(|s| s.into_owned())
+                    // if rustfmt doesn't work, use the unformatted source
+                    .unwrap_or(src)
+            }
             Language::Elm => elm::render(&spec),
         }
     }

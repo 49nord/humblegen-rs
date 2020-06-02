@@ -1,5 +1,6 @@
 snake_case_ident = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | "_" | ASCII_DIGIT)* }
 camel_case_ident = @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_LOWER | ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
+kebab_case_ident = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | "-" | ASCII_DIGIT)* }
 
 open_curly = _{ "{" }
 close_curly = _{ "}" }
@@ -18,22 +19,48 @@ doc_comment = { doc_comment_line+ }
 struct_definition = { doc_comment? ~ "struct" ~ camel_case_ident ~ struct_fields }
 struct_fields = { open_curly ~ close_curly |
                   open_curly ~ struct_field_def ~ (comma ~ struct_field_def)* ~ comma? ~ close_curly }
-struct_field_def = { doc_comment? ~ snake_case_ident ~ colon ~ type_ident }
+struct_embeds = { ":" ~ camel_case_ident+ }
+struct_field_def = { struct_field_def_node | struct_field_def_embed }
+struct_field_def_embed = { ".." ~ type_ident }
+struct_field_def_node  = { doc_comment? ~  struct_field_def_pair }
+struct_field_def_pair = { snake_case_ident ~ colon ~ type_ident }
 
 enum_definition = { doc_comment? ~ "enum" ~ enum_def }
 enum_def = { camel_case_ident ~ open_curly ~ close_curly |
              camel_case_ident ~ open_curly ~ enum_variant_def ~ (comma ~ enum_variant_def)* ~ comma? ~ close_curly }
 enum_variant_def = { doc_comment? ~ (camel_case_ident ~ tuple_def | camel_case_ident ~ struct_fields | camel_case_ident ~ newtype_def | camel_case_ident) }
 
-type_ident = { built_in_atom | list_type | option_type | map_type | tuple_def | camel_case_ident }
-built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" | "datetime" | "date" }
+service_definition = { doc_comment? ~ "service" ~ camel_case_ident ~ service_def }
+http_route = ${http_route_segment+ }
+http_route_segment = ${
+    "/" ~ (kebab_case_ident|http_route_segment_arg)
+}
+http_route_segment_arg = !{ open_curly ~ struct_field_def_pair ~ close_curly }
+
+service_def = {
+    (open_curly ~ close_curly) |
+    (open_curly ~ service_rule ~ (comma ~ service_rule)* ~ comma? ~ close_curly)
+}
+http_query = !{ "?" ~ open_curly ~ type_ident ~ close_curly }
+http_get = { "GET" }
+http_post = { "POST" }
+http_delete = { "DELETE" }
+service_rule = { doc_comment? ~ service_rule_def }
+service_rule_def = {
+    http_post ~ http_route ~ http_query? ~ "->" ~ type_ident ~ "->" ~ type_ident |
+    ( http_get | http_delete ) ~ http_route ~ http_query? ~ "->" ~ type_ident
+}
+
+type_ident = { built_in_atom | list_type | option_type | result_type | map_type | tuple_def | camel_case_ident }
+built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" | "datetime" | "date" | "()" }
 list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
 option_type = { "option" ~ open_bracket ~ type_ident ~ close_bracket }
+result_type = { "result" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
 map_type = { "map" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
 tuple_def = { open_paren ~ type_ident ~ comma ~ (type_ident ~ (comma ~ type_ident)*)? ~ close_paren }
 newtype_def = { open_paren ~ type_ident ~ close_paren }
 
-spec_item = _{ (struct_definition | enum_definition) }
+spec_item = _{ (struct_definition | enum_definition | service_definition) }
 spec = { (spec_item)* }
 doc = _{ SOI ~ spec ~ EOI }
 

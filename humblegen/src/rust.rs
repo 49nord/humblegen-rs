@@ -1,5 +1,8 @@
 //! Rust code generator.
 
+pub(crate) mod rustfmt;
+mod service_server;
+
 use crate::ast;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -18,12 +21,19 @@ fn fmt_opt_string(s: &Option<String>) -> &str {
 
 /// Render a spec definition.
 pub fn render(spec: &ast::Spec) -> TokenStream {
-    spec.iter()
-        .flat_map(|spec_item| match spec_item {
-            ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
-            ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
-        })
-        .collect()
+    let mut out = TokenStream::new();
+
+    out.extend(spec.iter().flat_map(|spec_item| match spec_item {
+        ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
+        ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+        ast::SpecItem::ServiceDef(_) => quote! {}, // done below
+    }));
+
+    out.extend(service_server::render_services(
+        spec.iter().filter_map(|si| si.service_def()),
+    ));
+
+    out
 }
 
 /// Render a struct definition.
@@ -57,9 +67,9 @@ fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
 }
 
 /// Render a field node.
-fn render_field_node(field: &ast::FieldNode) -> TokenStream {
-    let ident = fmt_ident(&field.name);
-    let ty = render_type_ident(&field.type_ident);
+fn render_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
+    let ident = fmt_ident(&pair.name);
+    let ty = render_type_ident(&pair.type_ident);
     quote!(#ident: #ty)
 }
 
@@ -69,7 +79,7 @@ fn render_field_node(field: &ast::FieldNode) -> TokenStream {
 /// additional `pub` qualifier.
 fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
     let doc_comment = fmt_opt_string(&field.doc_comment);
-    let field = render_field_node(field);
+    let field = render_field_def_pair(&field.pair);
 
     quote!(#[doc = #doc_comment] pub #field)
 }
@@ -90,7 +100,7 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
                 .iter()
                 .map(|field| {
                     let doc_comment = fmt_opt_string(&field.doc_comment);
-                    let fld = render_field_node(field);
+                    let fld = render_field_def_pair(&field.pair);
                     quote!(#[doc = #doc_comment] #fld)
                 })
                 .collect();
@@ -116,6 +126,11 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
         ast::TypeIdent::Option(inner) => {
             let inner_ty = render_type_ident(inner);
             quote!(Option<#inner_ty>)
+        }
+        ast::TypeIdent::Result(ok, err) => {
+            let ok_ty = render_type_ident(ok);
+            let err_ty = render_type_ident(err);
+            quote!(Result<#ok_ty, #err_ty>)
         }
         ast::TypeIdent::Map(key, value) => {
             let key_ty = render_type_ident(key);
@@ -144,15 +159,18 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
 /// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> TokenStream {
     match atom {
+        ast::AtomType::Empty => quote!(()),
         ast::AtomType::Str => quote!(String),
         ast::AtomType::I32 => quote!(i32),
         ast::AtomType::U32 => quote!(u32),
         ast::AtomType::U8 => quote!(u8),
         ast::AtomType::F64 => quote!(f64),
         ast::AtomType::Bool => quote!(bool),
-        ast::AtomType::DateTime => quote!(::chrono::DateTime::<::chrono::prelude::Utc>),
+        ast::AtomType::DateTime => {
+            quote!(::humblegen_rt::chrono::DateTime::<::humblegen_rt::chrono::prelude::Utc>)
+        }
         // chrono::Date doesn't implement serde::Serialize / serde::Deserialize:
         // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
-        ast::AtomType::Date => quote!(::chrono::NaiveDate),
+        ast::AtomType::Date => quote!(::humblegen_rt::chrono::NaiveDate),
     }
 }

@@ -1,0 +1,40 @@
+image: "rust:latest"
+
+before_script:
+  - rustup component add rustfmt
+  - rustup component add clippy
+  - rustc --version && cargo --version # Print version info for debugging
+
+.template.code-checks:
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    CODE_CHECK_DIR: "."
+    CODE_CHECK_PROFILE_FLAG: ""
+    # for caching
+    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
+  cache:
+    key:
+      files:
+        - Cargo.lock
+        - example/Cargo.lock
+    paths:
+      - $CARGO_HOME
+      - target
+      - example/target
+      - async-trait-with-sync/target
+  script:
+    - cd "${CODE_CHECK_DIR}"
+    - cargo check ${CODE_CHECK_PROFILE_FLAG} --all --verbose
+    - cargo test  ${CODE_CHECK_PROFILE_FLAG} --all --verbose
+    - cargo fmt   --all -- --check
+    - cargo clippy -- -D warnings
+
+ci-main-workspace:
+  extends: .template.code-checks
+  variables:
+    CODE_CHECK_DIR: "."
+
+ci-example-project:
+  extends: .template.code-checks
+  variables:
+    CODE_CHECK_DIR: "./example"

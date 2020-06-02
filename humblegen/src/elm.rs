@@ -101,6 +101,7 @@ fn render_def(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -131,8 +132,8 @@ fn render_enum_def(edef: &ast::EnumDef) -> String {
 fn render_struct_field(field: &ast::FieldNode) -> String {
     format!(
         "{name}: {ty}",
-        name = field_name(&field.name),
-        ty = render_type_ident(&field.type_ident)
+        name = field_name(&field.pair.name),
+        ty = render_type_ident(&field.pair.type_ident)
     )
 }
 
@@ -180,6 +181,7 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
         ast::TypeIdent::List(inner) => format!("List {}", opt_parens(render_type_ident(inner))),
         ast::TypeIdent::Option(inner) => format!("Maybe {}", opt_parens(render_type_ident(inner))),
+        ast::TypeIdent::Result(_okk, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => format!(
             "Dict {} {}",
             opt_parens(render_type_ident(key)),
@@ -201,6 +203,7 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> String {
 /// Render an atomic type.
 fn render_atom(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "String",
         ast::AtomType::I32 => "Int",
         ast::AtomType::U32 => "Int",
@@ -221,6 +224,7 @@ fn render_decoders(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_decoder(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_decoder(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -274,8 +278,8 @@ fn render_enum_decoder(edef: &ast::EnumDef) -> String {
 fn render_field_decoder(field: &ast::FieldNode) -> String {
     format!(
         "|> required \"{name}\" {decoder}",
-        name = field.name,
-        decoder = opt_parens(render_type_decoder(&field.type_ident)),
+        name = field.pair.name,
+        decoder = opt_parens(render_type_decoder(&field.pair.type_ident)),
     )
 }
 
@@ -296,7 +300,11 @@ fn render_variant_decoder(variant: &ast::VariantDef) -> String {
                 .iter()
                 .enumerate()
                 .map(|(idx, field)| {
-                    format!("{name} = x{arg}", name = field_name(&field.name), arg = idx)
+                    format!(
+                        "{name} = x{arg}",
+                        name = field_name(&field.pair.name),
+                        arg = idx
+                    )
                 })
                 .join(", "),
             field_decoders = fields.iter().map(render_field_decoder).join(" "),
@@ -317,6 +325,7 @@ fn render_type_decoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::Option(inner) => {
             format!("D.maybe {}", opt_parens(render_type_decoder(inner)))
         }
+        ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(
                 render_type_decoder(key),
@@ -361,6 +370,7 @@ fn render_components_by_index_pipeline(tdef: &ast::TupleDef) -> String {
 /// Render a decoder for an atomic type.
 fn render_atom_decoder(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "D.string",
         ast::AtomType::I32 => "D.int",
         ast::AtomType::U32 => "D.int",
@@ -395,6 +405,7 @@ fn render_helpers(spec: &ast::Spec) -> String {
             // No helpers for structs.
             ast::SpecItem::StructDef(_) => "".to_string(),
             ast::SpecItem::EnumDef(edef) => render_enum_helpers(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -427,6 +438,7 @@ fn render_encoders(spec: &ast::Spec) -> String {
         .map(|spec_item| match spec_item {
             ast::SpecItem::StructDef(sdef) => render_struct_encoder(sdef),
             ast::SpecItem::EnumDef(edef) => render_enum_encoder(edef),
+            ast::SpecItem::ServiceDef(sdef) => unimplemented!("{:?}", sdef),
         })
         .join("\n\n")
 }
@@ -463,9 +475,9 @@ fn render_enum_encoder(edef: &ast::EnumDef) -> String {
 fn render_field_encoder(field: &ast::FieldNode) -> String {
     format!(
         "(\"{name}\", {value_encoder} obj.{field_name})",
-        name = field.name,
-        field_name = field_name(&field.name),
-        value_encoder = opt_parens(render_type_encoder(&field.type_ident))
+        name = field.pair.name,
+        field_name = field_name(&field.pair.name),
+        value_encoder = opt_parens(render_type_encoder(&field.pair.type_ident))
     )
 }
 
@@ -507,6 +519,7 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::Option(inner) => {
             format!("encMaybe {}", opt_parens(render_type_encoder(inner)))
         }
+        ast::TypeIdent::Result(_ok, _err) => todo!(),
         ast::TypeIdent::Map(key, value) => {
             assert_eq!(
                 render_type_encoder(key),
@@ -523,6 +536,7 @@ fn render_type_encoder(type_ident: &ast::TypeIdent) -> String {
 /// Render an atomic type encoder.
 fn render_atom_encoder(atom: &ast::AtomType) -> String {
     match atom {
+        ast::AtomType::Empty => unimplemented!(),
         ast::AtomType::Str => "E.string",
         ast::AtomType::I32 => "E.int",
         ast::AtomType::U32 => "E.int",

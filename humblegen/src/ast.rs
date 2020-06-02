@@ -11,6 +11,11 @@ impl Spec {
     pub fn iter(&self) -> impl Iterator<Item = &SpecItem> {
         self.0.iter()
     }
+
+    /// Mutable iterator over items in spec.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut SpecItem> {
+        self.0.iter_mut()
+    }
 }
 
 /// A Spec item node.
@@ -20,6 +25,18 @@ pub enum SpecItem {
     StructDef(StructDef),
     /// `enum` definition.
     EnumDef(EnumDef),
+    /// `service` definition
+    ServiceDef(ServiceDef),
+}
+
+impl SpecItem {
+    /// The service definition if `self` is a `ServiceDef`.
+    pub fn service_def(&self) -> Option<&ServiceDef> {
+        match self {
+            SpecItem::ServiceDef(s) => Some(s),
+            _ => None,
+        }
+    }
 }
 
 /// A struct definition.
@@ -106,19 +123,151 @@ impl VariantDef {
     }
 }
 
-/// A field node (field definition inside struct).
+/// A service definition.
+/// Example:
+/// ```text
+/// /// Monster management service.
+/// service MonsterApi {
+///    GET  /monsters -> vec[Monster],
+///    POST /monsters -> MonsterData -> result[Monster][MonsterError]
+/// }
+/// ```
 #[derive(Debug)]
-pub struct FieldNode {
-    /// Name of the field.
+pub struct ServiceDef {
+    /// The service name. (example: `MonsterApi`)
     pub name: String,
-    /// Type of the field.
-    pub type_ident: TypeIdent,
+    /// The doc comment of the service. (example: `Monster management service.`)
+    pub doc_comment: Option<String>,
+    /// The service endpoints. (example: see struct `ServiceEndpoint`)
+    pub endpoints: Vec<ServiceEndpoint>,
+}
+
+/// An endpoint within a service definition.
+/// Example:
+/// ```text
+/// /// Retrieve all monsters.
+/// GET /monsters -> vec[Monster],
+/// ```
+#[derive(Debug)]
+pub struct ServiceEndpoint {
+    /// The doc comment of the endpoint. (example: `Retrieve all monsters.`)
+    pub doc_comment: Option<String>,
+    /// The route of the endpoint. (example: see struct `ServiceRoute`)
+    pub route: ServiceRoute,
+}
+
+/// And endpoint's route.
+/// Example:
+/// ```text
+/// GET  /monsters?{GetMonstersQuery} -> vec[Monster],
+/// POST /monsters -> MonsterData -> result[Monster][MonsterError]
+/// ```
+#[derive(Debug)]
+pub enum ServiceRoute {
+    /// A GET endpoint.
+    Get {
+        /// The route components. See struct `ServiceRouteComponent`.
+        components: Vec<ServiceRouteComponent>,
+        /// The query type, if specified. (example: `GetMonstersQuery`)
+        query: Option<TypeIdent>,
+        /// The route return type.
+        ret: TypeIdent,
+    },
+    /// A POST endpoint.
+    Post {
+        /// The route components. See struct `ServiceRouteComponent`.
+        components: Vec<ServiceRouteComponent>,
+        /// The query type, if specified. (example: `GetMonstersQuery`)
+        query: Option<TypeIdent>,
+        /// The POST body type. (example: `MonsterData`)
+        body: TypeIdent,
+        /// The route return type.
+        ret: TypeIdent,
+    },
+    /// A DELETE endpoint
+    Delete {
+        /// The route components. See struct `ServiceRouteComponent`.
+        components: Vec<ServiceRouteComponent>,
+        /// The query type, if specified. (example: `GetMonstersQuery`)
+        query: Option<TypeIdent>,
+        /// The route return type.
+        ret: TypeIdent,
+    },
+}
+
+impl ServiceRoute {
+    /// The route components. See struct `ServiceRouteComponent`.
+    pub fn components(&self) -> &Vec<ServiceRouteComponent> {
+        match self {
+            ServiceRoute::Get { components, .. } => components,
+            ServiceRoute::Delete { components, .. } => components,
+            ServiceRoute::Post { components, .. } => components,
+        }
+    }
+
+    /// The query type, if specified. (example: `GetMonstersQuery`)
+    pub fn query(&self) -> &Option<TypeIdent> {
+        match self {
+            ServiceRoute::Get { query, .. } => query,
+            ServiceRoute::Delete { query, .. } => query,
+            ServiceRoute::Post { query, .. } => query,
+        }
+    }
+
+    /// The return type.
+    pub fn return_type(&self) -> &TypeIdent {
+        match self {
+            ServiceRoute::Get { ret, .. } => ret,
+            ServiceRoute::Delete { ret, .. } => ret,
+            ServiceRoute::Post { ret, .. } => ret,
+        }
+    }
+}
+
+/// A component of a `ServiceRoute`.
+/// Example:
+/// ```text
+/// GET /monsters/{id: str}
+/// ```
+/// results in
+/// - `Literal("monsters")
+/// - `Variable(FieldDefPair{ name: "id", type_ident: TypeIdent::BuiltIn(AtomType::Str) })`
+///
+#[derive(Debug)]
+pub enum ServiceRouteComponent {
+    Literal(String),
+    Variable(FieldDefPair),
+}
+
+/// A field node (field definition inside struct).
+#[derive(Debug, Clone)]
+pub struct FieldNode {
+    pub pair: FieldDefPair,
     /// Documentation comment.
     pub doc_comment: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct FieldDefPair {
+    /// Name of the field.
+    pub name: String,
+    /// Type of the field.
+    pub type_ident: TypeIdent,
+}
+
+impl FieldDefPair {
+    /// Whether the given FieldDefPair is a humblespec embed
+    /// (only valid if it is within a struct's `FieldNode`).
+    pub fn is_embed(&self) -> bool {
+        self.type_ident
+            .user_defined()
+            .map(|ident_name| &self.name == ident_name)
+            .unwrap_or(false)
+    }
+}
+
 /// A type identifier.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypeIdent {
     /// Built-in (atomic) type.
     BuiltIn(AtomType),
@@ -126,6 +275,8 @@ pub enum TypeIdent {
     List(Box<TypeIdent>),
     /// `option[T]`
     Option(Box<TypeIdent>),
+    /// `result[T]`
+    Result(Box<TypeIdent>, Box<TypeIdent>),
     /// `map[t][u]`
     Map(Box<TypeIdent>, Box<TypeIdent>),
     /// Tuple type.
@@ -134,9 +285,20 @@ pub enum TypeIdent {
     UserDefined(String),
 }
 
+impl TypeIdent {
+    pub fn user_defined(&self) -> Option<&String> {
+        match self {
+            TypeIdent::UserDefined(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
 /// An atomic type.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AtomType {
+    /// Empty type
+    Empty,
     /// String.
     Str,
     /// Signed 32-bit integer.
@@ -156,7 +318,7 @@ pub enum AtomType {
 }
 
 /// A tuple definition.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TupleDef(pub Vec<TypeIdent>);
 
 impl TupleDef {

@@ -1,0 +1,86 @@
+// We are going to define the service and its data types and subsequently
+// explain the philosophy behind the idea.
+
+
+/// A wandering monster
+struct Monster {
+    /// Monster ID.
+    id: i32,
+    .. MonsterData,
+    .. MonsterData2,
+}
+
+struct MonsterData {
+    /// The monster's name
+    name: str,
+    /// Max hitpoints.
+    hp: i32,
+}
+
+struct MonsterData2 {
+    foo: str,
+    .. MonsterData3,
+}
+
+struct MonsterData3 {
+    bar: str
+}
+
+/// Errors returned by the monster service.
+enum MonsterError {
+    TooWeak,
+    TooStrong { max_strength: i32 },
+}
+
+struct PoliceCar {}
+
+enum PoliceError {
+
+}
+
+struct MonsterQuery {
+    name: option[str],
+    max_age: option[i32],
+}
+
+/// service Godzilla provides services related to monsters.
+service Godzilla {
+    /// Get foo.
+    GET /foo -> u32,
+    /// Get monster by id
+    GET /monsters/{id: str} -> result[Monster][MonsterError],
+    /// Get monster by posting a query
+    GET /monsters?{MonsterQuery} -> list[Monster],   // user-defined query type:    uses serde_urlencoded to decode query as a application/x-www-form-urlencoded
+    GET /monsters2?{str} -> list[Monster],           // all other types:            uses  ::std::primitive::str::parse
+    GET /monsters3?{i32} -> list[Monster],
+    GET /monsters4 -> list[Monster],                 // no query:  ignores any query in the request (drops it)
+
+    /// Create a new monster.
+    POST /monsters -> MonsterData -> result[Monster][MonsterError],
+
+    /// Delete a monster
+    DELETE /monster/{id: str} -> result[()][MonsterError],
+
+    GET /version -> String,      // result[String][HttpError]
+
+    // requires auth + special autho
+    GET /tokio-police-locations -> result[list[PoliceCar]][PoliceError],
+}
+
+service Movies {
+}
+
+
+// Error Types:
+// 
+//   - domain errors are defined as an enum MonsterError
+//   - service-level errors are mapped to HTTP status codes
+//         - database down 600
+//         - authn: 401
+//         - authz: 403
+//         - non-existent API endpoint 404
+//   - network or socket-level errors are specific to the backend code generator
+//      - elm client: Http.Error
+//
+// Note that non-existence of an entity within the backend (e.g. a Monster) is a _domain error_, not
+// a HTTP status 404.
