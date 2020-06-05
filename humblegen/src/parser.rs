@@ -203,6 +203,8 @@ fn parse_service_rule_def(pair: pest::iterators::Pair<Rule>) -> ServiceRoute {
         Rule::http_get => parse_service_rule_get,
         Rule::http_delete => parse_service_rule_delete,
         Rule::http_post => parse_service_rule_post,
+        Rule::http_put => parse_service_rule_put,
+        Rule::http_patch => parse_service_rule_patch,
         x => panic!("unexpected token {:?}", x),
     };
     nodes.next().unwrap(); // consume what we peeked
@@ -229,6 +231,24 @@ fn parse_service_rule_delete(pair: &mut pest::iterators::Pairs<Rule>) -> Service
 
 fn parse_service_rule_post(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
     ServiceRoute::Post {
+        components: parse_http_route(pair.next().unwrap()),
+        query: parse_http_query(pair),
+        body: parse_type_ident(pair.next().unwrap()),
+        ret: parse_type_ident(pair.next().unwrap()),
+    }
+}
+
+fn parse_service_rule_put(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
+    ServiceRoute::Put {
+        components: parse_http_route(pair.next().unwrap()),
+        query: parse_http_query(pair),
+        body: parse_type_ident(pair.next().unwrap()),
+        ret: parse_type_ident(pair.next().unwrap()),
+    }
+}
+
+fn parse_service_rule_patch(pair: &mut pest::iterators::Pairs<Rule>) -> ServiceRoute {
+    ServiceRoute::Patch {
         components: parse_http_route(pair.next().unwrap()),
         query: parse_http_query(pair),
         body: parse_type_ident(pair.next().unwrap()),

@@ -22,6 +22,14 @@ struct MonsterData2 {
     .. MonsterData3,
 }
 
+/// patch of a monster
+struct MonsterPatch {
+    name: option[str],
+    hp: option[i32],   
+    foo: option[str],
+}
+
+
 struct MonsterData3 {
     bar: str
 }
@@ -57,6 +65,12 @@ service Godzilla {
 
     /// Create a new monster.
     POST /monsters -> MonsterData -> result[Monster][MonsterError],
+
+    /// Overwrite a monster.
+    PUT /monsters/{id: str} -> Monster -> result[()][MonsterError],
+
+    /// Patch a monster.
+    PATCH /monsters/{id: str} -> MonsterPatch -> result[()][MonsterError],
 
     /// Delete a monster
     DELETE /monster/{id: str} -> result[()][MonsterError],

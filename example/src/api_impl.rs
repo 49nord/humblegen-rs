@@ -91,6 +91,24 @@ impl protocol::Godzilla for MonsterApiImpl {
         println!("would delete id={}", id);
         unimplemented!()
     }
+
+    async fn put_monsters_id(
+        &self,
+        monster: protocol::Monster,
+        id: String,
+    ) -> protocol::Response<Result<(), protocol::MonsterError>> {
+        dbg!((id, monster));
+        unimplemented!()
+    }
+
+    async fn patch_monsters_id(
+        &self,
+        patch: protocol::MonsterPatch,
+        id: String,
+    ) -> protocol::Response<Result<(), protocol::MonsterError>> {
+        dbg!((id, patch));
+        unimplemented!()
+    }
 }
 
 /// Implements the `Movies` service (trait `protocol::Movies`)

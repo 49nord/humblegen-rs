@@ -443,6 +443,8 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
         ast::ServiceRoute::Get { .. } => None,
         ast::ServiceRoute::Delete { .. } => None,
         ast::ServiceRoute::Post { body, .. } => Some(render_type_ident(body)),
+        ast::ServiceRoute::Put { body, .. } => Some(render_type_ident(body)),
+        ast::ServiceRoute::Patch { body, .. } => Some(render_type_ident(body)),
     };
 
     let ret_type = render_type_ident(endpoint.route.return_type());
@@ -477,6 +479,8 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
             ("delete", quote!(::humblegen_rt::hyper::Method::DELETE))
         }
         ast::ServiceRoute::Post { .. } => ("post", quote!(::humblegen_rt::hyper::Method::POST)),
+        ast::ServiceRoute::Put { .. } => ("put", quote!(::humblegen_rt::hyper::Method::PUT)),
+        ast::ServiceRoute::Patch { .. } => ("patch", quote!(::humblegen_rt::hyper::Method::PATCH)),
     };
     let traitfn_ident = format_ident!(
         "{}_{}",
