@@ -266,6 +266,14 @@ impl ServiceRoute {
             ServiceRoute::Patch { ret, .. } => ret,
         }
     }
+
+    pub fn http_method_as_str(&self) -> &'static str {
+        match self {
+            ServiceRoute::Get { .. } => "GET",
+            ServiceRoute::Delete { .. } => "DELETE",
+            ServiceRoute::Post { .. } => "POST",
+        }
+    }
 }
 
 /// A component of a `ServiceRoute`.
@@ -339,7 +347,7 @@ impl TypeIdent {
 }
 
 /// An atomic type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum AtomType {
     /// Empty type
     Empty,
