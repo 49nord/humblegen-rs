@@ -5,6 +5,7 @@ license = "Apache-2.0 OR MIT"
 authors = [
     "Marc Brinkmann <git@marcbrinkmann.de>",
     "Christian Schwarz <me@cschwarz.com>",
+    "Reiner Dolp <git@reinerdolp.com>",
 ]
 edition = "2018"
 description = "An experimental code-generator in the vain of protobuf, but a little more humble."
@@ -20,6 +21,9 @@ proc-macro2 = "1.0.8"
 quote = "1.0.3"
 syn = "1.0.17"
 which = { version = "3", optional = true }
+base64 = "0.12.1"
+comrak = "0.7"
+
 
 [dev-dependencies]
 trybuild = "1.0.27"

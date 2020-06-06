@@ -1,0 +1,16 @@
+<section class="endpoint" id="{endpointLink}">
+    <h1 class="endpoint--method-and-route">
+        <span class="endpoint--method endpoint--method--{httpMethod}">{httpMethod}</span>
+        <span class="signature">
+           <span class="endpoint--route">{endpointRoute}{endpointRouteQuery}</span>
+           <span class="endpoint--return-type">{endpointReturn}</span>
+           <span class="endpoint--summary">{endpointSummary}</span>
+        </span>
+        <a class="anchor icon icon--link" href="#{endpointLink}"></a>
+    </h1>
+    <div class="details">
+        <div class="endpoint--description">{endpointDescription}<div>
+        <h2 class="endpoint--return-type">Returns</h2>
+        <pre>{endpointReturn}</pre>
+    </div>
+</section>

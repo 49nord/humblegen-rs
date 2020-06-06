@@ -19,23 +19,6 @@ fn fmt_opt_string(s: &Option<String>) -> &str {
     s.as_ref().map(|s| s.as_str()).unwrap_or("")
 }
 
-/// Render a spec definition.
-pub fn render(spec: &ast::Spec) -> TokenStream {
-    let mut out = TokenStream::new();
-
-    out.extend(spec.iter().flat_map(|spec_item| match spec_item {
-        ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
-        ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
-        ast::SpecItem::ServiceDef(_) => quote! {}, // done below
-    }));
-
-    out.extend(service_server::render_services(
-        spec.iter().filter_map(|si| si.service_def()),
-    ));
-
-    out
-}
-
 /// Render a struct definition.
 fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
@@ -173,4 +156,21 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
         // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
         ast::AtomType::Date => quote!(::humblegen_rt::chrono::NaiveDate),
     }
+}
+
+/// Render a spec definition.
+pub fn render(spec: &ast::Spec) -> TokenStream {
+    let mut out = TokenStream::new();
+
+    out.extend(spec.iter().flat_map(|spec_item| match spec_item {
+        ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
+        ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+        ast::SpecItem::ServiceDef(_) => quote! {}, // done below
+    }));
+
+    out.extend(service_server::render_services(
+        spec.iter().filter_map(|si| si.service_def()),
+    ));
+
+    out
 }

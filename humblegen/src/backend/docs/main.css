@@ -1,0 +1,228 @@
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+/* Default Humblegen Style
+   Color Scheme based on the "Feeling Humble" palette: https://www.colourlovers.com/palette/2498588/FEELING_HUMBLE
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Mono:wght@400;500;700&display=swap');
+body {
+    background: #FEFEFE;
+    color: rgba(0, 0, 0, 0.87);
+    font-family: 'Noto Sans', sans-serif;
+}
+
+.service, .userDefinedTypes {
+    margin: 1em auto;
+    max-width: 60em;
+}
+
+.service--name {
+    font-size: 48px;
+    line-height: 64px;
+    padding: 2em 0 0 0;
+}
+
+.service--description {
+    border-bottom: 4px solid;
+    padding: .4em .4em 1em .4em;
+    font-size: 14px;
+}
+
+.endpoint--method, .userDefinedType--kind {
+    padding: .5em;
+    display: inline-block;
+    border-radius: .2em;
+    font-weight: bold;
+    color: rgba(0,0,0,.5);
+    font-size: 13px;
+    margin-right: .4em;
+    min-width: 4em;
+    text-align: center;
+    background: #0000002e;
+}
+
+.endpoint--method--GET { background: #FFCB30; }
+.endpoint--method--POST { background: #F07DBE; }
+.endpoint--method--DELETE { background: #FF6831; }
+
+.endpoint--route, .userDefinedType--name {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: bold;
+    font-size: 16px;
+    padding: .3em 0;
+}
+
+.endpoint--route var {
+    color: #FF6831;
+}
+.endpoint--route var::before {
+    content: "{";
+}
+
+.endpoint--route var::after {
+    content: "}";
+}
+
+.endpoint, .userDefinedType {
+    /*padding: .5em;*/
+    margin: 1em 0;
+    border: 1px solid #CCC;
+    border-radius: .2em;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.12), 0 2px 2px rgba(0,0,0,0.12);
+    position: relative;
+}
+
+.endpoint--description, .userDefinedType--description {
+    font-size: 14px;
+    padding: 1em 0 .2em 0;
+}
+
+.endpoint--return-type, .endpoint--properties {
+    padding-left: .4em; 
+    font-weight: bold;
+    flex-grow: 1;
+}
+
+.endpoint--method-and-route, .userDefinedType--kind-and-name {
+    padding: .5em;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.endpoint--method-and-route .endpoint--return-type {
+    font-family: 'Roboto Mono', monospace;
+    font-size: .8em;
+    opacity: 0.5;
+}
+
+.endpoint--method-and-route .endpoint--return-type::before {
+    content: "\279C";
+    display: inline-block;
+    padding-right: 0.3em;
+}
+
+
+.fold-open .endpoint--method-and-route, .fold-open .userDefinedType--kind-and-name {
+    background: #d3d3d329
+}
+
+.fold-open .details {
+    display: block;
+}
+
+.details {
+    display: none;
+    padding: .5em;
+}
+
+*:target {
+    background: #FFF5D6;
+}
+
+.icon {
+    display: block;
+    width: 1em;
+    height: 1em;
+    background-size: 1em 1em;
+    padding: .5em;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.anchor:hover {
+        background-color: rgba(136, 153, 166, 0.14);
+        border-radius: .2em;
+}
+
+nav {
+    display: flex; 
+    padding: .5em;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.12), 0 2px 2px rgba(0,0,0,0.12), 0 4px 4px rgba(0,0,0,0.12);
+    background: #edf0f1;
+    justify-content: flex-end;
+}
+
+.button-bar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    padding: .2em .8em .2em 0;
+    margin: .2em;
+    background: white;
+    border-radius: .2em;
+    color: #8899a6;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.signature {
+    display: flex;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    align-items: center;
+}
+
+.signature a:link, .signature a:visited {
+    color: inherit;
+}
+
+.endpoint--summary {
+    font-size: .8em;
+    opacity: .5;
+    padding-right: 1em;
+}

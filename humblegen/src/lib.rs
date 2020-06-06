@@ -4,6 +4,7 @@ use std::error::Error;
 use std::{env, io, path, str};
 
 mod ast;
+mod backend;
 mod elm;
 mod parser;
 mod rust;
@@ -15,6 +16,8 @@ pub enum Language {
     Rust,
     /// Elm
     Elm,
+    /// Documentation
+    Docs,
 }
 
 impl Language {
@@ -29,6 +32,7 @@ impl Language {
                     .unwrap_or(src)
             }
             Language::Elm => elm::render(&spec),
+            Language::Docs => backend::docs::render(&spec),
         }
     }
 }
@@ -37,9 +41,10 @@ impl str::FromStr for Language {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "rust" => Ok(Language::Rust),
-            "elm" => Ok(Language::Elm),
+        match s.to_uppercase().as_str() {
+            "RUST" => Ok(Language::Rust),
+            "ELM" => Ok(Language::Elm),
+            "DOCS" | "DOC" | "DOCUMENTATION" => Ok(Language::Docs),
             other => Err(format!("unknown language: {}", other)),
         }
     }
