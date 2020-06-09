@@ -45,9 +45,11 @@ http_query = !{ "?" ~ open_curly ~ type_ident ~ close_curly }
 http_get = { "GET" }
 http_post = { "POST" }
 http_delete = { "DELETE" }
+http_put = { "PUT" }
+http_patch = { "PATCH" }
 service_rule = { doc_comment? ~ service_rule_def }
 service_rule_def = {
-    http_post ~ http_route ~ http_query? ~ "->" ~ type_ident ~ "->" ~ type_ident |
+    ( http_post | http_put | http_patch ) ~ http_route ~ http_query? ~ "->" ~ type_ident ~ "->" ~ type_ident |
     ( http_get | http_delete ) ~ http_route ~ http_query? ~ "->" ~ type_ident
 }
 

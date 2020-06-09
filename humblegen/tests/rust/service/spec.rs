@@ -29,6 +29,16 @@ pub struct MonsterData2 {
     pub bar: String,
 }
 #[derive(Debug, Clone, serde :: Deserialize, serde :: Serialize)]
+#[doc = "patch of a monster"]
+pub struct MonsterPatch {
+    #[doc = ""]
+    pub name: Option<String>,
+    #[doc = ""]
+    pub hp: Option<i32>,
+    #[doc = ""]
+    pub foo: Option<String>,
+}
+#[derive(Debug, Clone, serde :: Deserialize, serde :: Serialize)]
 #[doc = ""]
 pub struct MonsterData3 {
     #[doc = ""]
@@ -143,40 +153,54 @@ impl std::fmt::Debug for Handler {
     }
 }
 #[doc = "service Godzilla provides services related to monsters."]
-#[doc = "```\n# [ humblegen_rt :: async_trait ( Sync ) ] pub trait Godzilla { # [ doc = \"```\\nasync fn get_foo ( & self , ) -> Response < u32 >\\n```\" ] # [ doc = \"Get foo.\" ] async fn get_foo ( & self , ) -> Response < u32 > ; # [ doc = \"```\\nasync fn get_monsters_id ( & self , id : String , ) -> Response < Result < Monster , MonsterError > >\\n```\" ] # [ doc = \"Get monster by id\" ] async fn get_monsters_id ( & self , id : String , ) -> Response < Result < Monster , MonsterError > > ; # [ doc = \"```\\nasync fn get_monsters ( & self , query : Option < MonsterQuery > , ) -> Response < Vec < Monster > >\\n```\" ] # [ doc = \"Get monster by posting a query\" ] async fn get_monsters ( & self , query : Option < MonsterQuery > , ) -> Response < Vec < Monster > > ; # [ doc = \"```\\nasync fn get_monsters_2 ( & self , query : Option < String > , ) -> Response < Vec < Monster > >\\n```\" ] # [ doc = \"\" ] async fn get_monsters_2 ( & self , query : Option < String > , ) -> Response < Vec < Monster > > ; # [ doc = \"```\\nasync fn get_monsters_3 ( & self , query : Option < i32 > , ) -> Response < Vec < Monster > >\\n```\" ] # [ doc = \"\" ] async fn get_monsters_3 ( & self , query : Option < i32 > , ) -> Response < Vec < Monster > > ; # [ doc = \"```\\nasync fn get_monsters_4 ( & self , ) -> Response < Vec < Monster > >\\n```\" ] # [ doc = \"\" ] async fn get_monsters_4 ( & self , ) -> Response < Vec < Monster > > ; # [ doc = \"```\\nasync fn post_monsters ( & self , post_body : MonsterData , ) -> Response < Result < Monster , MonsterError > >\\n```\" ] # [ doc = \"Create a new monster.\" ] async fn post_monsters ( & self , post_body : MonsterData , ) -> Response < Result < Monster , MonsterError > > ; # [ doc = \"```\\nasync fn delete_monster_id ( & self , id : String , ) -> Response < Result < ( ) , MonsterError > >\\n```\" ] # [ doc = \"Delete a monster\" ] async fn delete_monster_id ( & self , id : String , ) -> Response < Result < ( ) , MonsterError > > ; # [ doc = \"```\\nasync fn get_version ( & self , ) -> Response < String >\\n```\" ] # [ doc = \"\" ] async fn get_version ( & self , ) -> Response < String > ; # [ doc = \"```\\nasync fn get_tokio_police_locations ( & self , ) -> Response < Result < Vec < PoliceCar > , PoliceError > >\\n```\" ] # [ doc = \"\" ] async fn get_tokio_police_locations ( & self , ) -> Response < Result < Vec < PoliceCar > , PoliceError > > ; }\n```"]
+#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Godzilla {\n    async fn get_foo(&self) -> Response<u32>;\n    async fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>>;\n    async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;\n    async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;\n    async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;\n    async fn get_monsters_4(&self) -> Response<Vec<Monster>>;\n    async fn post_monsters(\n        &self,\n        post_body: MonsterData,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn put_monsters_id(\n        &self,\n        post_body: Monster,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn patch_monsters_id(\n        &self,\n        post_body: MonsterPatch,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;\n    async fn get_version(&self) -> Response<String>;\n    async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;\n}\n\n```"]
 #[humblegen_rt::async_trait(Sync)]
 pub trait Godzilla {
-    #[doc = "```\nasync fn get_foo ( & self , ) -> Response < u32 >\n```"]
+    #[doc = "```\nasync fn get_foo(&self) -> Response<u32> {}\n\n```"]
     #[doc = "Get foo."]
     async fn get_foo(&self) -> Response<u32>;
-    #[doc = "```\nasync fn get_monsters_id ( & self , id : String , ) -> Response < Result < Monster , MonsterError > >\n```"]
+    #[doc = "```\nasync fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
     #[doc = "Get monster by id"]
     async fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>>;
-    #[doc = "```\nasync fn get_monsters ( & self , query : Option < MonsterQuery > , ) -> Response < Vec < Monster > >\n```"]
+    #[doc = "```\nasync fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = "Get monster by posting a query"]
     async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_2 ( & self , query : Option < String > , ) -> Response < Vec < Monster > >\n```"]
+    #[doc = "```\nasync fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = ""]
     async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_3 ( & self , query : Option < i32 > , ) -> Response < Vec < Monster > >\n```"]
+    #[doc = "```\nasync fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = ""]
     async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_4 ( & self , ) -> Response < Vec < Monster > >\n```"]
+    #[doc = "```\nasync fn get_monsters_4(&self) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = ""]
     async fn get_monsters_4(&self) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn post_monsters ( & self , post_body : MonsterData , ) -> Response < Result < Monster , MonsterError > >\n```"]
+    #[doc = "```\nasync fn post_monsters(&self, post_body: MonsterData) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
     #[doc = "Create a new monster."]
     async fn post_monsters(
         &self,
         post_body: MonsterData,
     ) -> Response<Result<Monster, MonsterError>>;
-    #[doc = "```\nasync fn delete_monster_id ( & self , id : String , ) -> Response < Result < ( ) , MonsterError > >\n```"]
+    #[doc = "```\nasync fn put_monsters_id(\n    &self,\n    post_body: Monster,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
+    #[doc = "Overwrite a monster."]
+    async fn put_monsters_id(
+        &self,
+        post_body: Monster,
+        id: String,
+    ) -> Response<Result<(), MonsterError>>;
+    #[doc = "```\nasync fn patch_monsters_id(\n    &self,\n    post_body: MonsterPatch,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
+    #[doc = "Patch a monster."]
+    async fn patch_monsters_id(
+        &self,
+        post_body: MonsterPatch,
+        id: String,
+    ) -> Response<Result<(), MonsterError>>;
+    #[doc = "```\nasync fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>> {}\n\n```"]
     #[doc = "Delete a monster"]
     async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;
-    #[doc = "```\nasync fn get_version ( & self , ) -> Response < String >\n```"]
+    #[doc = "```\nasync fn get_version(&self) -> Response<String> {}\n\n```"]
     #[doc = ""]
     async fn get_version(&self) -> Response<String>;
-    #[doc = "```\nasync fn get_tokio_police_locations ( & self , ) -> Response < Result < Vec < PoliceCar > , PoliceError > >\n```"]
+    #[doc = "```\nasync fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>> {}\n\n```"]
     #[doc = ""]
     async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;
 }
@@ -333,6 +357,56 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
         {
             let handler = Arc::clone(&handler);
             Route {
+                method: ::humblegen_rt::hyper::Method::PUT,
+                regex: ::humblegen_rt::regex::Regex::new("^/monsters/(?P<id>[^/]+)$").unwrap(),
+                dispatcher: Box::new(
+                    move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
+                          captures| {
+                        let handler = Arc::clone(&handler);
+                        let id: String = {
+                            |s| {
+                                ::std::primitive::str::parse(s)
+                                    .expect("regex should prevent parse errors")
+                            }
+                        }(&captures["id"]);
+                        Box::pin(async move {
+                            let post_body: Monster = deser_post_data(req.body_mut()).await?;
+                            Ok(handler_response_to_hyper_response(
+                                handler.put_monsters_id(post_body, id).await,
+                            ))
+                        })
+                    },
+                ),
+            }
+        },
+        {
+            let handler = Arc::clone(&handler);
+            Route {
+                method: ::humblegen_rt::hyper::Method::PATCH,
+                regex: ::humblegen_rt::regex::Regex::new("^/monsters/(?P<id>[^/]+)$").unwrap(),
+                dispatcher: Box::new(
+                    move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
+                          captures| {
+                        let handler = Arc::clone(&handler);
+                        let id: String = {
+                            |s| {
+                                ::std::primitive::str::parse(s)
+                                    .expect("regex should prevent parse errors")
+                            }
+                        }(&captures["id"]);
+                        Box::pin(async move {
+                            let post_body: MonsterPatch = deser_post_data(req.body_mut()).await?;
+                            Ok(handler_response_to_hyper_response(
+                                handler.patch_monsters_id(post_body, id).await,
+                            ))
+                        })
+                    },
+                ),
+            }
+        },
+        {
+            let handler = Arc::clone(&handler);
+            Route {
                 method: ::humblegen_rt::hyper::Method::DELETE,
                 regex: ::humblegen_rt::regex::Regex::new("^/monster/(?P<id>[^/]+)$").unwrap(),
                 dispatcher: Box::new(
@@ -393,7 +467,7 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
     ]
 }
 #[doc = ""]
-#[doc = "```\n# [ humblegen_rt :: async_trait ( Sync ) ] pub trait Movies { }\n```"]
+#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Movies {}\n\n```"]
 #[humblegen_rt::async_trait(Sync)]
 pub trait Movies {}
 #[allow(unused_variables)]

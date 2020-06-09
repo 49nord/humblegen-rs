@@ -18,12 +18,12 @@ This document describes the humblespec language.
 
 A service definition defines a set of endpoints.
 An endpoint is comprised of
-* a **method** (GET, POST)
+* a **method** (`GET`, `POST`, `DELETE`, `PUT`, `PATCH`)
 * a **route** consisting of slash-separated **route components**, which can be
   * a literal route component (kebab-case)
   * a parameter that can be deserialized from a string that does not contain a slash
 * an optional **query** type specified by `?{`*`StructType`*`}`
-* for `POST` requests, a **body type**
+* for `POST`, `PUT`, and `PATCH` requests, a **body type**
 * a **response type**
 
 **Example:**

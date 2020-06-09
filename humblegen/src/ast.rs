@@ -193,6 +193,28 @@ pub enum ServiceRoute {
         /// The route return type.
         ret: TypeIdent,
     },
+    /// A PUT endpoint.
+    Put {
+        /// The route components. See struct `ServiceRouteComponent`.
+        components: Vec<ServiceRouteComponent>,
+        /// The query type, if specified. (example: `GetMonstersQuery`)
+        query: Option<TypeIdent>,
+        /// The POST body type. (example: `MonsterData`)
+        body: TypeIdent,
+        /// The route return type.
+        ret: TypeIdent,
+    },
+    /// A PATCH endpoint.
+    Patch {
+        /// The route components. See struct `ServiceRouteComponent`.
+        components: Vec<ServiceRouteComponent>,
+        /// The query type, if specified. (example: `GetMonstersQuery`)
+        query: Option<TypeIdent>,
+        /// The POST body type. (example: `MonsterData`)
+        body: TypeIdent,
+        /// The route return type.
+        ret: TypeIdent,
+    },
 }
 
 impl ServiceRoute {
@@ -202,6 +224,8 @@ impl ServiceRoute {
             ServiceRoute::Get { components, .. } => components,
             ServiceRoute::Delete { components, .. } => components,
             ServiceRoute::Post { components, .. } => components,
+            ServiceRoute::Put { components, .. } => components,
+            ServiceRoute::Patch { components, .. } => components,
         }
     }
 
@@ -211,6 +235,8 @@ impl ServiceRoute {
             ServiceRoute::Get { query, .. } => query,
             ServiceRoute::Delete { query, .. } => query,
             ServiceRoute::Post { query, .. } => query,
+            ServiceRoute::Put { query, .. } => query,
+            ServiceRoute::Patch { query, .. } => query,
         }
     }
 
@@ -220,6 +246,8 @@ impl ServiceRoute {
             ServiceRoute::Get { ret, .. } => ret,
             ServiceRoute::Delete { ret, .. } => ret,
             ServiceRoute::Post { ret, .. } => ret,
+            ServiceRoute::Put { ret, .. } => ret,
+            ServiceRoute::Patch { ret, .. } => ret,
         }
     }
 }
