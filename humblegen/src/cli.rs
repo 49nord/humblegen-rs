@@ -1,5 +1,5 @@
-use std::{path, str, ops::Deref};
 use anyhow::{self, Result};
+use std::{ops::Deref, path, str};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -8,7 +8,7 @@ pub enum CliError {
     UnknownBackend(String),
     #[error("unknown output artifact '{0}'")]
     UnknownArtifact(String),
-    #[error("code generation failed")]
+    #[error(transparent)]
     LibraryError(#[from] humblegen::LibError),
 }
 
@@ -62,10 +62,20 @@ impl Deref for Artifact {
 #[argh(description = "generate code from humble protocol spec")]
 pub(crate) struct CliArgs {
     /// language to generate code for
-    #[argh(option, short = 'l', long = "language", from_str_fn(str::FromStr::from_str))]
+    #[argh(
+        option,
+        short = 'l',
+        long = "language",
+        from_str_fn(str::FromStr::from_str)
+    )]
     pub(crate) backend: Backend,
     /// generate REST endpoints for a server
-    #[argh(option, short = 'a', from_str_fn(str::FromStr::from_str), default = "Artifact::default()")]
+    #[argh(
+        option,
+        short = 'a',
+        from_str_fn(str::FromStr::from_str),
+        default = "Artifact::default()"
+    )]
     pub(crate) artifacts: Artifact,
     /// input path to humble file
     #[argh(positional)]
@@ -75,18 +85,23 @@ pub(crate) struct CliArgs {
     pub(crate) output: path::PathBuf,
 }
 
-
 impl CliArgs {
     /// Dynamcally select and instantiate the correct backend for the given
     /// command-line arguments.
-    /// 
+    ///
     /// Might fail because the backend cannot fulfill the request. For example,
     /// requesting server endpoints for elm -- a client-side programming language --
     /// will result in an error.
     pub fn code_generator(&self) -> Result<Box<dyn humblegen::CodeGenerator>, CliError> {
         match self.backend {
-            Backend::Rust => Ok(Box::new(humblegen::backend::rust::Generator::new(*self.artifacts).map_err(CliError::LibraryError)?)),
-            Backend::Elm => Ok(Box::new(humblegen::backend::elm::Generator::new(*self.artifacts).map_err(CliError::LibraryError)?)),
+            Backend::Rust => Ok(Box::new(
+                humblegen::backend::rust::Generator::new(*self.artifacts)
+                    .map_err(CliError::LibraryError)?,
+            )),
+            Backend::Elm => Ok(Box::new(
+                humblegen::backend::elm::Generator::new(*self.artifacts)
+                    .map_err(CliError::LibraryError)?,
+            )),
             Backend::Docs => Ok(Box::new(humblegen::backend::docs::Generator::default())),
         }
     }
