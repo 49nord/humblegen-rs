@@ -1,11 +1,15 @@
 //! Elm code generator.
 
 use crate::ast;
+use crate::backend::elm;
+use crate::backend::rust;
 use comrak::{markdown_to_html, ComrakOptions};
 use itertools::Itertools;
-use std::fmt;
+use std::{path::Path, fmt, error::Error, fs::File};
+use std::io::Write;
 
 use base64;
+use ast::Spec;
 
 struct NavigationLevel {
     label: String,
@@ -120,6 +124,7 @@ impl Context {
                         struct_def.doc_comment.as_deref().unwrap_or(""),
                         &ComrakOptions::default()
                     ),
+                    codeSamples = Self::struct_definition_to_html(struct_def),
                     id = Self::link_to_user_defined_type(&struct_def.name)
                 )),
                 ast::SpecItem::EnumDef(enum_def) => Some(format!(
@@ -130,11 +135,188 @@ impl Context {
                         enum_def.doc_comment.as_deref().unwrap_or(""),
                         &ComrakOptions::default()
                     ),
+                    codeSamples = Self::enum_definition_to_html(enum_def),
                     id = Self::link_to_user_defined_type(&enum_def.name)
                 )),
                 _ => None,
             })
             .join("\n")
+    }
+
+    fn tabbed_navigation_to_html(tabs: Vec<(&str, String)>) -> String {
+        format!(
+            include_str!("docs/tabs.html"),
+            nav = tabs
+                .iter()
+                .map(|(lang, _)| format!(include_str!("docs/tabs_tab.html"), label = Escape(lang)))
+                .join(""),
+            bodies = tabs
+                .iter()
+                .map(|(lang, body)| format!(
+                    include_str!("docs/tabs_body.html"),
+                    label = Escape(lang),
+                    body = body
+                ))
+                .join(""),
+        )
+    }
+
+    fn render_struct_property_table(struct_def: &ast::StructDef) -> String {
+        format!(
+            include_str!("docs/typedef_table_struct.html"),
+            tableBody = struct_def
+                .fields
+                .iter()
+                .map(|field_node| {
+                    format!(
+                        include_str!("docs/typedef_table_struct_field.html"),
+                        fieldName = Escape(&field_node.pair.name),
+                        fieldType = Self::type_ident_to_html(&field_node.pair.type_ident),
+                        fieldComment = markdown_to_html(
+                            &field_node.doc_comment.as_deref().unwrap_or(""),
+                            &ComrakOptions::default()
+                        )
+                    )
+                })
+                .join("")
+        )
+    }
+
+    fn struct_definition_to_html(struct_def: &ast::StructDef) -> String {
+        // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
+        let tabs = vec![
+            (
+                "Language Agnostic",
+                Self::render_struct_property_table(struct_def),
+            ),
+            (
+                "Rust",
+                format!(
+                    include_str!("docs/typedef_for_language.html"),
+                    langId = "rust",
+                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
+                        &rust::render_struct_def(struct_def)
+                    ))
+                ),
+            ),
+            (
+                "Elm",
+                format!(
+                    include_str!("docs/typedef_for_language.html"),
+                    langId = "elm",
+                    code = Escape(&elm::render_struct_def(struct_def))
+                ),
+            ),
+        ];
+
+        Self::tabbed_navigation_to_html(tabs)
+    }
+
+    fn render_enum_variant_table(struct_def: &ast::EnumDef) -> String {
+        format!(
+            include_str!("docs/typedef_table_enum.html"),
+            tableBody = struct_def
+                .variants
+                .iter()
+                .map(|variant| {
+                    match &variant.variant_type {
+                        ast::VariantType::Simple => format!(
+                            include_str!("docs/typedef_table_enum_field.html"),
+                            variantNestingDepth = 0,
+                            variantNestingParent = "",
+                            variantName = Escape(&variant.name),
+                            variantValue = "<i>empty</i>",
+                            variantComment = markdown_to_html(
+                                &variant.doc_comment.as_deref().unwrap_or(""),
+                                &ComrakOptions::default()
+                            )
+                        ),
+                        ast::VariantType::Newtype(ty) => format!(
+                            include_str!("docs/typedef_table_enum_field.html"),
+                            variantNestingDepth = 0,
+                            variantNestingParent = "",
+                            variantName = Escape(&variant.name),
+                            variantValue = Self::type_ident_to_html(&ty),
+                            variantComment = markdown_to_html(
+                                &variant.doc_comment.as_deref().unwrap_or(""),
+                                &ComrakOptions::default()
+                            )
+                        ),
+
+                        ast::VariantType::Tuple(tuple) => format!(
+                            include_str!("docs/typedef_table_enum_field.html"),
+                            variantNestingDepth = 0,
+                            variantNestingParent = "",
+                            variantName = Escape(&variant.name),
+                            variantValue = "<i>tuple</i>",
+                            variantComment = markdown_to_html(
+                                &variant.doc_comment.as_deref().unwrap_or(""),
+                                &ComrakOptions::default()
+                            )
+                        ),
+
+                        ast::VariantType::Struct(fields) => {
+                            let mut rows = vec![format!(
+                                include_str!("docs/typedef_table_enum_field.html"),
+                                variantNestingDepth = 0,
+                                variantNestingParent = "",
+                                variantName = Escape(&variant.name),
+                                variantValue = "<i>anonymous structure</i>",
+                                variantComment = markdown_to_html(
+                                    &variant.doc_comment.as_deref().unwrap_or(""),
+                                    &ComrakOptions::default()
+                                )
+                            )];
+
+                            for field in fields.iter() {
+                                rows.push(format!(
+                                    include_str!("docs/typedef_table_enum_field.html"),
+                                    variantNestingDepth = 1,
+                                    variantNestingParent = struct_def.name,
+                                    variantName = Escape(&field.pair.name),
+                                    variantValue = Self::type_ident_to_html(&field.pair.type_ident),
+                                    variantComment = markdown_to_html(
+                                        &field.doc_comment.as_deref().unwrap_or(""),
+                                        &ComrakOptions::default(),
+                                    ),
+                                ));
+                            }
+                            rows.join("")
+                        }
+                    }
+                })
+                .join("")
+        )
+    }
+
+    fn enum_definition_to_html(enum_def: &ast::EnumDef) -> String {
+        // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
+        let tabs = vec![
+            (
+                "Language Agnostic",
+                Self::render_enum_variant_table(enum_def),
+            ),
+            (
+                "Rust",
+                format!(
+                    include_str!("docs/typedef_for_language.html"),
+                    langId = "rust",
+                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
+                        &rust::render_enum_def(enum_def)
+                    ))
+                ),
+            ),
+            (
+                "Elm",
+                format!(
+                    include_str!("docs/typedef_for_language.html"),
+                    langId = "elm",
+                    code = Escape(&elm::render_enum_def(enum_def))
+                ),
+            ),
+        ];
+
+        Self::tabbed_navigation_to_html(tabs)
     }
 
     fn endpoints_to_html(&mut self, endpoints: &[ast::ServiceEndpoint]) -> String {
@@ -171,15 +353,15 @@ impl Context {
 
     pub fn atom_to_html(t: ast::AtomType) -> &'static str {
         match t {
-            ast::AtomType::Empty => "Empty",
-            ast::AtomType::Str => "String",
-            ast::AtomType::I32 => "Integer",
-            ast::AtomType::U32 => "Unsinged Integer",
-            ast::AtomType::U8 => "Unsinged Integer",
-            ast::AtomType::F64 => "Float",
-            ast::AtomType::Bool => "Boolean",
-            ast::AtomType::DateTime => "DateTime",
-            ast::AtomType::Date => "Date",
+            ast::AtomType::Empty => "empty",
+            ast::AtomType::Str => "string",
+            ast::AtomType::I32 => "int",
+            ast::AtomType::U32 => "uint",
+            ast::AtomType::U8 => "uint",
+            ast::AtomType::F64 => "float",
+            ast::AtomType::Bool => "bool",
+            ast::AtomType::DateTime => "datetime",
+            ast::AtomType::Date => "date",
         }
     }
 
@@ -227,7 +409,7 @@ impl Context {
                 }
                 ast::ServiceRouteComponent::Variable(ast::FieldDefPair { name, type_ident }) => {
                     format!(
-                        "/<var>{}:{}</var>",
+                        "/<var><span class=\"var-bracket\">{{</span><span class=\"var-name\">{}</span><span class=\"var-ty-name-sep\">:</span><span class=\"var-ty\">{}</span><span class=\"var-bracket\">}}</span></var>",
                         Escape(&name),
                         Escape(&Self::type_ident_to_html(&type_ident))
                     )
@@ -237,7 +419,7 @@ impl Context {
     }
 
     pub fn components_to_link(route: &ast::ServiceRoute) -> String {
-        let componentStr = route
+        let component_str = route
             .components()
             .iter()
             .map(|c| match c {
@@ -252,7 +434,7 @@ impl Context {
             })
             .join("");
 
-        format!("{}{}", route.http_method_as_str(), componentStr)
+        format!("{}{}", route.http_method_as_str(), component_str)
     }
 
     fn to_html(&mut self) -> String {
@@ -263,7 +445,9 @@ impl Context {
             &self.spec_name(),
             "</title>",
             r#"<meta name="viewport" content="width=device-width, initial-scale=1">"#,
+            include_str!("docs/external_head.html"),
             "<style>",
+            //include_str!("docs/prism.css"),
             include_str!("docs/main.css"),
             &inline_svg_icon("link", include_str!("docs/unicode-symbol-1f517.svg")),
             &inline_svg_icon(
@@ -282,6 +466,7 @@ impl Context {
             "<script>",
             include_str!("docs/script.js"),
             "</script>",
+            include_str!("docs/external_body.html"),
         ]
         .join("\n")
     }
@@ -308,6 +493,18 @@ fn markdown_get_first_line_as_summary(markdown: &str) -> String {
     }
 }
 
-pub fn render(spec: &ast::Spec) -> String {
-    Context::default().add_spec(spec).to_html()
+#[derive(Default)]
+pub struct Generator {
 }
+
+impl crate::CodeGenerator for Generator {
+    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), Box<dyn Error>> {
+        let docs = Context::default().add_spec(spec).to_html();
+
+        // TODO: support folder as output path
+        let mut outfile = File::create(&output)?;
+        outfile.write_all(docs.as_bytes())?;
+        Ok(())
+    }
+}
+
