@@ -2,14 +2,15 @@
 
 mod cli;
 
-fn main() {
-    let args: cli::CliArgs = argh::from_env();
-    
-    let spec_file = std::fs::File::open(&args.input).expect("open input file");
-    let spec = humblegen::parse(spec_file).expect("parse input file");
+use anyhow::{Context, Result};
 
-    args.code_generator()
-        .expect("backend supports given arguments")
-        .generate(&spec, &args.output)
-        .expect("output generation succeeds");
+fn main() -> Result<()> {
+    let args: cli::CliArgs = argh::from_env();
+
+    let spec_file = std::fs::File::open(&args.input).context(format!("unable to open specification file {:?}", &args.input))?;
+    let spec = humblegen::parse(spec_file).context(format!("failed to parse specification file {:?}", &args.input))?;
+
+    args.code_generator()?.generate(&spec, &args.output)?;
+
+    Ok(())
 }

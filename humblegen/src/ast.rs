@@ -272,6 +272,8 @@ impl ServiceRoute {
             ServiceRoute::Get { .. } => "GET",
             ServiceRoute::Delete { .. } => "DELETE",
             ServiceRoute::Post { .. } => "POST",
+            ServiceRoute::Put { .. } => "PUT",
+            ServiceRoute::Patch { .. } => "PATCH",
         }
     }
 }

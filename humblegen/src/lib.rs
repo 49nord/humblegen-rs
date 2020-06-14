@@ -1,18 +1,57 @@
 //! Humblegen compiler library
 
-use std::error::Error;
-use std::{io, path::Path};
+use std::{io, fmt, path::Path};
 
 pub use ast::Spec;
 
 pub mod ast;
 pub mod backend;
 pub mod parser;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum LibError {
+    #[error("backend '{backend}' does not support artifact '{artifact}'")]
+    UnsupportedArtifact { backend: &'static str, artifact: Artifact },
+    #[error("I/O operation failed")]
+    IoError(#[from] io::Error),
+    #[error("parsing of humble specification failed")]
+    ParseError(#[from] pest::error::Error<parser::Rule>),
+}
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// Which artifacts to produce in addition to user defined types
+pub enum Artifact {
+    /// Only generate user defined type definitions 
+    TypesOnly,
+    /// Generate encoders, decoders and client-side REST API endpoints
+    ClientEndpoints,
+    /// Generate encoders, decoders and server-side REST API endpoints
+    ServerEndpoints,
+}
+
+
+impl Default for Artifact {
+    fn default() -> Self {
+        Artifact::TypesOnly
+    }
+}
+
+impl fmt::Display for Artifact {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            Artifact::TypesOnly => "TypesOnly",
+            Artifact::ClientEndpoints => "ClientEndpoints",
+            Artifact::ServerEndpoints => "ServerEndpoints",
+        };
+        write!(f, "{}", printable)
+    }
+}
 
 // Common interface of all backends
 pub trait CodeGenerator {
-    //fn generate<P: AsRef<Path>>(&self, spec :&Spec, output: P) -> Result<(), Box<dyn Error>>;
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), Box<dyn Error>>;
+    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), LibError>;
 }
 
 // match self {
@@ -45,8 +84,8 @@ pub trait CodeGenerator {
 //     Ok(dst.write_all(rendered.as_bytes())?)
 // }
 
-pub fn parse<I: io::Read>(mut src: I) -> Result<ast::Spec, Box<dyn Error>> {
+pub fn parse<I: io::Read>(mut src: I) -> Result<ast::Spec, LibError> {
     let mut input = String::new();
-    src.read_to_string(&mut input)?;
-    parser::parse(&input).map_err(|e| Box::new(e) as Box<dyn Error>)
+    src.read_to_string(&mut input).map_err(LibError::IoError)?;
+    Ok(parser::parse(&input).map_err(LibError::ParseError)?)
 }

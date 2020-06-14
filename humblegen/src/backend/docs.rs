@@ -4,12 +4,15 @@
 // as a simple HTML template engine. Since `format!` does not support loops,
 // listings are generated using `...map(|thing| format!(include_str!(...), ...)).join("")`.
 
-use crate::ast;
+use crate::{ast, LibError};
 use crate::backend::elm;
 use crate::backend::rust;
+
 use comrak::{markdown_to_html, ComrakOptions};
+use anyhow::{Result};
 use itertools::Itertools;
-use std::{path::Path, fmt, error::Error, fs::File};
+
+use std::{path::Path, fmt, fs::File};
 use std::io::Write;
 
 use base64;
@@ -136,7 +139,7 @@ impl Context {
         )
     }
 
-    fn render_struct_property_table(struct_def: &ast::StructDef) -> String {
+    fn generate_struct_property_table(struct_def: &ast::StructDef) -> String {
         format!(
             include_str!("docs/typedef_table_struct.html"),
             tableBody = struct_def
@@ -162,7 +165,7 @@ impl Context {
         let tabs = vec![
             (
                 "Language Agnostic",
-                Self::render_struct_property_table(struct_def),
+                Self::generate_struct_property_table(struct_def),
             ),
             (
                 "Rust",
@@ -170,7 +173,7 @@ impl Context {
                     include_str!("docs/typedef_for_language.html"),
                     langId = "rust",
                     code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::render_struct_def(struct_def)
+                        &rust::generate_struct_def(struct_def)
                     ))
                 ),
             ),
@@ -179,7 +182,7 @@ impl Context {
                 format!(
                     include_str!("docs/typedef_for_language.html"),
                     langId = "elm",
-                    code = Escape(&elm::render_struct_def(struct_def))
+                    code = Escape(&elm::generate_struct_def(struct_def))
                 ),
             ),
         ];
@@ -187,7 +190,7 @@ impl Context {
         Self::tabbed_navigation_to_html(tabs)
     }
 
-    fn render_enum_variant_table(struct_def: &ast::EnumDef) -> String {
+    fn generate_enum_variant_table(struct_def: &ast::EnumDef) -> String {
         format!(
             include_str!("docs/typedef_table_enum.html"),
             tableBody = struct_def
@@ -223,7 +226,7 @@ impl Context {
                             variantNestingDepth = 0,
                             variantNestingParent = "",
                             variantName = Escape(&variant.name),
-                            variantValue = Self::type_ident_to_html(&ast::TypeIdent::Tuple(*tuple)),
+                            variantValue = Self::tuple_def_to_html(tuple),
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
                                 &ComrakOptions::default()
@@ -269,7 +272,7 @@ impl Context {
         let tabs = vec![
             (
                 "Language Agnostic",
-                Self::render_enum_variant_table(enum_def),
+                Self::generate_enum_variant_table(enum_def),
             ),
             (
                 "Rust",
@@ -277,7 +280,7 @@ impl Context {
                     include_str!("docs/typedef_for_language.html"),
                     langId = "rust",
                     code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::render_enum_def(enum_def)
+                        &rust::generate_enum_def(enum_def)
                     ))
                 ),
             ),
@@ -286,7 +289,7 @@ impl Context {
                 format!(
                     include_str!("docs/typedef_for_language.html"),
                     langId = "elm",
-                    code = Escape(&elm::render_enum_def(enum_def))
+                    code = Escape(&elm::generate_enum_def(enum_def))
                 ),
             ),
         ];
@@ -340,6 +343,17 @@ impl Context {
         }
     }
 
+    
+    pub fn tuple_def_to_html(tuple: &ast::TupleDef) -> String {
+        format!(
+            "({})", tuple
+            .elements()
+            .iter()
+            .map(Self::type_ident_to_html)
+            .join(", ")
+        )
+    }
+
     pub fn type_ident_to_html(type_ident: &ast::TypeIdent) -> String {
         match type_ident {
             ast::TypeIdent::BuiltIn(atom) => Self::atom_to_html(*atom).to_string(),
@@ -355,14 +369,7 @@ impl Context {
                 Self::type_ident_to_html(&*ty1),
                 Self::type_ident_to_html(&*ty2)
             ),
-            ast::TypeIdent::Tuple(tuple) => format!(
-                "({})",
-                tuple
-                    .elements()
-                    .iter()
-                    .map(|x| Self::type_ident_to_html(x))
-                    .join(", ")
-            ),
+            ast::TypeIdent::Tuple(tuple) => Self::tuple_def_to_html(tuple),
             ast::TypeIdent::UserDefined(name) => format!(
                 r##"<a href="#{}">{}</a>"##,
                 Self::link_to_user_defined_type(name),
@@ -473,12 +480,12 @@ pub struct Generator {
 }
 
 impl crate::CodeGenerator for Generator {
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), Box<dyn Error>> {
+    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), LibError> {
         let docs = Context::default().add_spec(spec).to_html();
 
         // TODO: support folder as output path
-        let mut outfile = File::create(&output)?;
-        outfile.write_all(docs.as_bytes())?;
+        let mut outfile = File::create(&output).map_err(LibError::IoError)?;
+        outfile.write_all(docs.as_bytes()).map_err(LibError::IoError)?;
         Ok(())
     }
 }

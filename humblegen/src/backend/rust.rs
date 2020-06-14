@@ -3,11 +3,14 @@
 pub(crate) mod rustfmt;
 mod service_server;
 
-use crate::{Spec, ast};
+use crate::{ast, Artifact, LibError, Spec};
+use anyhow::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::path::Path;
-use std::{fs::File, error::Error, io::Write};
+use std::{fs::File, io::Write};
+
+const BACKEND_NAME: &str = "rust";
 
 /// Helper function to format an ident.
 ///
@@ -21,11 +24,11 @@ fn fmt_opt_string(s: &Option<String>) -> &str {
     s.as_ref().map(|s| s.as_str()).unwrap_or("")
 }
 
-/// Render a struct definition.
-pub(crate) fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
+/// Generate rust code for a struct definition.
+pub(crate) fn generate_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
     let doc_comment = fmt_opt_string(&sdef.doc_comment);
-    let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
+    let fields: Vec<_> = sdef.fields.iter().map(generate_pub_field_node).collect();
 
     quote!(
         #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -36,12 +39,12 @@ pub(crate) fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     )
 }
 
-/// Render an enum definition.
-pub(crate) fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
+/// Generate rust code for an enum definition.
+pub(crate) fn generate_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let ident = fmt_ident(&edef.name);
     let doc_comment = fmt_opt_string(&edef.doc_comment);
 
-    let variants: Vec<_> = edef.variants.iter().map(render_variant).collect();
+    let variants: Vec<_> = edef.variants.iter().map(generate_variant).collect();
 
     quote!(
         #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -51,33 +54,33 @@ pub(crate) fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     })
 }
 
-/// Render a field node.
-fn render_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
+/// Generate rust code for a field node.
+fn generate_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
     let ident = fmt_ident(&pair.name);
-    let ty = render_type_ident(&pair.type_ident);
+    let ty = generate_type_ident(&pair.type_ident);
     quote!(#ident: #ty)
 }
 
-/// Render a public field node.
+/// Generate rust code for a public field node.
 ///
 /// Even though all fields are pub in generated code, fields in a `pub enum` cannot carry an
 /// additional `pub` qualifier.
-fn render_pub_field_node(field: &ast::FieldNode) -> TokenStream {
+fn generate_pub_field_node(field: &ast::FieldNode) -> TokenStream {
     let doc_comment = fmt_opt_string(&field.doc_comment);
-    let field = render_field_def_pair(&field.pair);
+    let field = generate_field_def_pair(&field.pair);
 
     quote!(#[doc = #doc_comment] pub #field)
 }
 
-/// Render an enum variant.
-fn render_variant(variant: &ast::VariantDef) -> TokenStream {
+/// Generate rust code for an enum variant.
+fn generate_variant(variant: &ast::VariantDef) -> TokenStream {
     let doc_comment = fmt_opt_string(&variant.doc_comment);
     let ident = fmt_ident(&variant.name);
 
     match variant.variant_type {
         ast::VariantType::Simple => quote!(#[doc = #doc_comment] #ident),
         ast::VariantType::Tuple(ref inner) => {
-            let tuple = render_tuple_def(inner);
+            let tuple = generate_tuple_def(inner);
             quote!(#[doc = #doc_comment] #ident #tuple)
         }
         ast::VariantType::Struct(ref fields) => {
@@ -85,7 +88,7 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
                 .iter()
                 .map(|field| {
                     let doc_comment = fmt_opt_string(&field.doc_comment);
-                    let fld = render_field_def_pair(&field.pair);
+                    let fld = generate_field_def_pair(&field.pair);
                     quote!(#[doc = #doc_comment] #fld)
                 })
                 .collect();
@@ -93,36 +96,36 @@ fn render_variant(variant: &ast::VariantDef) -> TokenStream {
             quote!(#[doc = #doc_comment] #ident { #(#fields),*})
         }
         ast::VariantType::Newtype(ref ty) => {
-            let inner = render_type_ident(ty);
+            let inner = generate_type_ident(ty);
 
             quote!(#[doc = #doc_comment] #ident(#inner))
         }
     }
 }
 
-/// Render a type identifier.
-fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
+/// Generate rust code for a type identifier.
+fn generate_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
     match type_ident {
-        ast::TypeIdent::BuiltIn(atom) => render_atom(atom),
+        ast::TypeIdent::BuiltIn(atom) => generate_atom(atom),
         ast::TypeIdent::List(inner) => {
-            let inner_ty = render_type_ident(inner);
+            let inner_ty = generate_type_ident(inner);
             quote!(Vec<#inner_ty>)
         }
         ast::TypeIdent::Option(inner) => {
-            let inner_ty = render_type_ident(inner);
+            let inner_ty = generate_type_ident(inner);
             quote!(Option<#inner_ty>)
         }
         ast::TypeIdent::Result(ok, err) => {
-            let ok_ty = render_type_ident(ok);
-            let err_ty = render_type_ident(err);
+            let ok_ty = generate_type_ident(ok);
+            let err_ty = generate_type_ident(err);
             quote!(Result<#ok_ty, #err_ty>)
         }
         ast::TypeIdent::Map(key, value) => {
-            let key_ty = render_type_ident(key);
-            let value_ty = render_type_ident(value);
+            let key_ty = generate_type_ident(key);
+            let value_ty = generate_type_ident(value);
             quote!(::std::collections::HashMap<#key_ty, #value_ty>)
         }
-        ast::TypeIdent::Tuple(tdef) => render_tuple_def(tdef),
+        ast::TypeIdent::Tuple(tdef) => generate_tuple_def(tdef),
         ast::TypeIdent::UserDefined(ident) => {
             let id = fmt_ident(&ident);
             quote!(#id)
@@ -130,9 +133,9 @@ fn render_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
     }
 }
 
-/// Render a tuple definition.
-fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
-    let components: Vec<_> = tdef.components().iter().map(render_type_ident).collect();
+/// Generate rust code for a tuple definition.
+fn generate_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
+    let components: Vec<_> = tdef.elements().iter().map(generate_type_ident).collect();
 
     if components.len() == 1 {
         quote!((#(#components),*,))
@@ -141,8 +144,8 @@ fn render_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
     }
 }
 
-/// Render an atomic type.
-fn render_atom(atom: &ast::AtomType) -> TokenStream {
+/// Generate rust code for an atomic type.
+fn generate_atom(atom: &ast::AtomType) -> TokenStream {
     match atom {
         ast::AtomType::Empty => quote!(()),
         ast::AtomType::Str => quote!(String),
@@ -160,35 +163,54 @@ fn render_atom(atom: &ast::AtomType) -> TokenStream {
     }
 }
 
-/// Render a spec definition.
-pub fn render(spec: &ast::Spec) -> TokenStream {
+/// Generate rust code for a spec definition.
+pub fn render_spec(spec: &ast::Spec) -> TokenStream {
     let mut out = TokenStream::new();
 
     out.extend(spec.iter().flat_map(|spec_item| match spec_item {
-        ast::SpecItem::StructDef(sdef) => render_struct_def(sdef),
-        ast::SpecItem::EnumDef(edef) => render_enum_def(edef),
+        ast::SpecItem::StructDef(sdef) => generate_struct_def(sdef),
+        ast::SpecItem::EnumDef(edef) => generate_enum_def(edef),
         ast::SpecItem::ServiceDef(_) => quote! {}, // done below
     }));
 
-    out.extend(service_server::render_services(
+    out.extend(service_server::generate_services(
         spec.iter().filter_map(|si| si.service_def()),
     ));
 
     out
 }
 
-#[derive(Default)]
 pub struct Generator {
+    _artifact: Artifact,
+}
+
+impl Generator {
+    pub fn new(artifact: Artifact) -> Result<Self, LibError> {
+        match artifact {
+            Artifact::TypesOnly | Artifact::ServerEndpoints => Ok(Self {
+                _artifact: artifact,
+            }),
+            Artifact::ClientEndpoints => Err(LibError::UnsupportedArtifact {
+                artifact,
+                backend: BACKEND_NAME,
+            }),
+        }
+    }
 }
 
 impl crate::CodeGenerator for Generator {
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), Box<dyn Error>> {
-        let generated_code_unformatted = render(spec).to_string();
-        let generated_code = rustfmt::rustfmt_2018_generated_string(&generated_code_unformatted).map(std::borrow::Cow::into_owned).unwrap_or(generated_code_unformatted);
+    fn generate(&self, spec: &Spec, output: &Path) -> Result<(), LibError> {
+        // TODO: honor artifact field
+        let generated_code_unformatted = render_spec(spec).to_string();
+        let generated_code = rustfmt::rustfmt_2018_generated_string(&generated_code_unformatted)
+            .map(std::borrow::Cow::into_owned)
+            .unwrap_or(generated_code_unformatted);
 
         // TODO: support folder as output path
-        let mut outfile = File::create(&output)?;
-        outfile.write_all(generated_code.as_bytes())?;
+        let mut outfile = File::create(&output).map_err(LibError::IoError)?;
+        outfile
+            .write_all(generated_code.as_bytes())
+            .map_err(LibError::IoError)?;
         Ok(())
     }
 }
