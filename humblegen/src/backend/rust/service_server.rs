@@ -1,7 +1,7 @@
-//! Rendering of a [`hyper`](https://hyper.rs)-based server that exposes humblespec `service`s.
+//! Code generation for a [`hyper`](https://hyper.rs)-based server that exposes humblespec `service`s.
 //!
-//! The entrypoint to this module is the `render_services` function.
-//! It renders:
+//! The entrypoint to this module is the `generate_services` function.
+//! It generates:
 //!
 //! - a `pub struct Builder` that users of the generated code use to instantiate an HTTP server,
 //! - a `pub trait $ServiceName` handler trait that users of the generated use to implement,
@@ -17,14 +17,14 @@
 //!
 //! # Implementation Notes
 //!
-//! - In general, follow the entrypoint `render_services` to understand how this module is put together.
+//! - In general, follow the entrypoint `generate_services` to understand how this module is put together.
 //!   The functions in this module are ordered top-down, i.e., big-picture first, details last.
 //!
 //! - First, we lower all AST service definitions into our own intermediate representation.
 //!     - The 'lowered representations' barely deserve their name: they are mostly collections of identifiers,
 //!       names, or generated code snippets that are used in multiple places in the generated code and thus
 //!       should be defined in one central place.
-//! - Then, we render the generated code, using those intermediate representations.
+//! - Then, we generate code using those intermediate representations.
 //!
 
 use crate::ast;
@@ -32,7 +32,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
 use super::fmt_opt_string;
-use super::render_type_ident;
+use super::generate_type_ident;
 
 /// Lowered representation of an `ast::ServiceDef`.
 struct Service {
@@ -67,8 +67,8 @@ enum ServiceRouteComponent {
     },
 }
 
-/// Entrypoint for rendering *all* services of a humblespec.
-pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
+/// Entrypoint for generate *all* services of a humblespec.
+pub fn generate_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
     all_services: I,
 ) -> TokenStream {
     let all_services = lower_all_services(all_services);
@@ -79,7 +79,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
 
     let mut out = TokenStream::new();
 
-    // render imports and server builder
+    // generate imports and server builder
     out.extend(quote! {
         #[allow(unused_imports)]
         use ::humblegen_rt::deser_helpers::{
@@ -149,7 +149,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
 
     });
 
-    // render the `Handler` enum
+    // generate code for the `Handler` enum
     let handler_enum_variants: Vec<_> = all_services
         .iter()
         .map(|s| {
@@ -211,17 +211,17 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
 
     });
 
-    // render the service definitions
-    out.extend(all_services.iter().map(render_service).flatten());
+    // generate code for the service definitions
+    out.extend(all_services.iter().map(generate_service).flatten());
 
     out
 }
 
-/// renders a single service's Rust structs:
+/// generates rust code for a single a single service, which includes:
 ///
-/// - its handler trait definition
-/// - its routes factory function (called by Handler::into_routes)
-fn render_service(service: &Service) -> TokenStream {
+/// - a handler trait definition
+/// - a routes factory function (called by Handler::into_routes)
+fn generate_service(service: &Service) -> TokenStream {
     let service_routes = &service.service_routes;
     let trait_comment = &service.trait_comment;
 
@@ -258,7 +258,7 @@ fn render_service(service: &Service) -> TokenStream {
             let decl_as_doc_comment =
                 // render with a trailing `{}` so that rustfmt 1.4.12 doesn't crash with
                 // thread 'main' panicked at 'internal error: entered unreachable code', src/tools/rustfmt/src/visitor.rs:372:18
-                render_as_rustdoc_comment_try_rustfmt(&quote! { #decl_without_comment {} });
+                generate_as_rustdoc_comment_try_rustfmt(&quote! { #decl_without_comment {} });
             let decl_with_comment = quote! {
                 #[doc = #decl_as_doc_comment ]
                 #doc_comment
@@ -284,7 +284,7 @@ fn render_service(service: &Service) -> TokenStream {
                 #(#trait_fns_without_comment ;)*
             }
         };
-        render_as_rustdoc_comment_try_rustfmt(&d)
+        generate_as_rustdoc_comment_try_rustfmt(&d)
     };
     let trait_def = quote! {
         #[doc = #trait_comment]
@@ -456,7 +456,7 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
             }
             ast::ServiceRouteComponent::Variable(ast::FieldDefPair { name, type_ident }) => {
                 let rust_var_ident = format_ident!("{}", name);
-                let rust_var_type = render_type_ident(type_ident);
+                let rust_var_type = generate_type_ident(type_ident);
                 let url_regex_str = r"[^/]+".to_owned();
                 ServiceRouteComponent::Param {
                     spec_arg_name: name.clone(),
@@ -471,12 +471,12 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
     let post_body_type = match &endpoint.route {
         ast::ServiceRoute::Get { .. } => None,
         ast::ServiceRoute::Delete { .. } => None,
-        ast::ServiceRoute::Post { body, .. } => Some(render_type_ident(body)),
-        ast::ServiceRoute::Put { body, .. } => Some(render_type_ident(body)),
-        ast::ServiceRoute::Patch { body, .. } => Some(render_type_ident(body)),
+        ast::ServiceRoute::Post { body, .. } => Some(generate_type_ident(body)),
+        ast::ServiceRoute::Put { body, .. } => Some(generate_type_ident(body)),
+        ast::ServiceRoute::Patch { body, .. } => Some(generate_type_ident(body)),
     };
 
-    let ret_type = render_type_ident(endpoint.route.return_type());
+    let ret_type = generate_type_ident(endpoint.route.return_type());
 
     let (query_type, query_deser_fn) = endpoint
         .route
@@ -487,7 +487,7 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
                 ast::TypeIdent::UserDefined(_) => quote! { deser_query_serde_urlencoded },
                 _ => quote! { deser_query_primitive },
             };
-            (Some(render_type_ident(qt)), deser_fn)
+            (Some(generate_type_ident(qt)), deser_fn)
         })
         .unwrap_or((None, quote! {}));
 
@@ -534,7 +534,7 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
     }
 }
 
-fn render_as_rustdoc_comment_try_rustfmt(s: &TokenStream) -> String {
+fn generate_as_rustdoc_comment_try_rustfmt(s: &TokenStream) -> String {
     format!(
         "```\n{}\n```",
         super::rustfmt::try_rustfmt_2018_token_stream(s)
