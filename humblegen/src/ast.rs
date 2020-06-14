@@ -375,7 +375,7 @@ pub struct TupleDef(pub Vec<TypeIdent>);
 
 impl TupleDef {
     /// Get a reference to the tuple components.
-    pub fn components(&self) -> &Vec<TypeIdent> {
+    pub fn elements(&self) -> &Vec<TypeIdent> {
         &self.0
     }
 }
