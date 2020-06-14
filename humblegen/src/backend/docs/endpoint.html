@@ -1,5 +1,5 @@
-<section class="endpoint" id="{endpointLink}">
-    <h1 class="endpoint--method-and-route">
+<section class="endpoint foldable" id="{endpointLink}">
+    <h1 class="endpoint--method-and-route foldable-handle">
         <span class="endpoint--method endpoint--method--{httpMethod}">{httpMethod}</span>
         <span class="signature">
            <span class="endpoint--route">{endpointRoute}{endpointRouteQuery}</span>
@@ -9,8 +9,6 @@
         <a class="anchor icon icon--link" href="#{endpointLink}"></a>
     </h1>
     <div class="details">
-        <div class="endpoint--description">{endpointDescription}<div>
-        <h2 class="endpoint--return-type">Returns</h2>
-        <pre>{endpointReturn}</pre>
+        <div class="endpoint--description">{endpointDescription}</div>
     </div>
 </section>

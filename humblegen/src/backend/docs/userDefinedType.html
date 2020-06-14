@@ -1,9 +1,12 @@
-<section class="userDefinedType" id="{id}">
-    <h1 class="userDefinedType--kind-and-name">
+<section class="userDefinedType foldable" id="{id}">
+    <h1 class="userDefinedType--kind-and-name foldable-handle">
         <span class="userDefinedType--kind userDefinedType--kind--{kind}">{kind}</span>
         <span class="userDefinedType--name">{name}</span>
+        <a class="anchor icon icon--link" href="#{id}"></a>
     </h1>
     <div class="details">
-        <div class="userDefinedType--description">{description}<div>
+        <div class="userDefinedType--description">{description}</div>
+
+        <div class="userDefinedType--codeSamples">{codeSamples}</div>
     </div>
 </section>
