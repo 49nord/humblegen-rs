@@ -239,20 +239,8 @@ mod decoder_generation {
                 components = generate_components_by_index_pipeline(components)
             ),
             ast::VariantType::Struct(ref fields) => format!(
-                "D.succeed (\\{unnamed_args} -> {name} {{ {struct_assignment} }}) {field_decoders}",
+                "D.succeed {name} {field_decoders}",
                 name = variant.name,
-                unnamed_args = (0..fields.0.len()).map(|i| format!("x{}", i)).join(" "),
-                struct_assignment = fields
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, field)| {
-                        format!(
-                            "{name} = x{arg}",
-                            name = field_name(&field.pair.name),
-                            arg = idx
-                        )
-                    })
-                    .join(", "),
                 field_decoders = fields.iter().map(generate_field_decoder).join(" "),
             ),
             ast::VariantType::Newtype(ref ty) => format!(
