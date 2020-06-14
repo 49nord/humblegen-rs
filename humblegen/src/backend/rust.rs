@@ -3,9 +3,11 @@
 pub(crate) mod rustfmt;
 mod service_server;
 
-use crate::ast;
+use crate::{Spec, ast};
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::path::Path;
+use std::{fs::File, error::Error, io::Write};
 
 /// Helper function to format an ident.
 ///
@@ -20,7 +22,7 @@ fn fmt_opt_string(s: &Option<String>) -> &str {
 }
 
 /// Render a struct definition.
-fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
+pub(crate) fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
     let ident = fmt_ident(&sdef.name);
     let doc_comment = fmt_opt_string(&sdef.doc_comment);
     let fields: Vec<_> = sdef.fields.iter().map(render_pub_field_node).collect();
@@ -35,7 +37,7 @@ fn render_struct_def(sdef: &ast::StructDef) -> TokenStream {
 }
 
 /// Render an enum definition.
-fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
+pub(crate) fn render_enum_def(edef: &ast::EnumDef) -> TokenStream {
     let ident = fmt_ident(&edef.name);
     let doc_comment = fmt_opt_string(&edef.doc_comment);
 
@@ -173,4 +175,20 @@ pub fn render(spec: &ast::Spec) -> TokenStream {
     ));
 
     out
+}
+
+#[derive(Default)]
+pub struct Generator {
+}
+
+impl crate::CodeGenerator for Generator {
+    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), Box<dyn Error>> {
+        let generated_code_unformatted = render(spec).to_string();
+        let generated_code = rustfmt::rustfmt_2018_generated_string(&generated_code_unformatted).map(std::borrow::Cow::into_owned).unwrap_or(generated_code_unformatted);
+
+        // TODO: support folder as output path
+        let mut outfile = File::create(&output)?;
+        outfile.write_all(generated_code.as_bytes())?;
+        Ok(())
+    }
 }
