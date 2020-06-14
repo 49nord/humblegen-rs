@@ -8,7 +8,7 @@ pub enum CliError {
     UnknownBackend(String),
     #[error("unknown output artifact '{0}'")]
     UnknownArtifact(String),
-    #[error("{0}")]
+    #[error("code generation failed")]
     LibraryError(#[from] humblegen::LibError),
 }
 
