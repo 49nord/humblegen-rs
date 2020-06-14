@@ -1,6 +1,6 @@
 //! Humblegen compiler library
 
-use std::{io, fmt, path::Path};
+use std::{fmt, io, path::Path};
 
 pub use ast::Spec;
 
@@ -12,25 +12,26 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum LibError {
     #[error("backend '{backend}' does not support artifact '{artifact}'")]
-    UnsupportedArtifact { backend: &'static str, artifact: Artifact },
-    #[error("I/O operation failed")]
+    UnsupportedArtifact {
+        backend: &'static str,
+        artifact: Artifact,
+    },
+    #[error(transparent)]
     IoError(#[from] io::Error),
-    #[error("parsing of humble specification failed")]
+    #[error(transparent)]
     ParseError(#[from] pest::error::Error<parser::Rule>),
 }
-
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 /// Which artifacts to produce in addition to user defined types
 pub enum Artifact {
-    /// Only generate user defined type definitions 
+    /// Only generate user defined type definitions
     TypesOnly,
     /// Generate encoders, decoders and client-side REST API endpoints
     ClientEndpoints,
     /// Generate encoders, decoders and server-side REST API endpoints
     ServerEndpoints,
 }
-
 
 impl Default for Artifact {
     fn default() -> Self {
@@ -51,7 +52,7 @@ impl fmt::Display for Artifact {
 
 // Common interface of all backends
 pub trait CodeGenerator {
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), LibError>;
+    fn generate(&self, spec: &Spec, output: &Path) -> Result<(), LibError>;
 }
 
 // match self {
