@@ -48,6 +48,8 @@ enum PostReviewError {
 
 ```
 
+* Definition order does not matter. A service MAY use a type before its definition
+
 ### Error Handling
 
 A built-in `ServiceError` type covers all errors that are not specific to the domain model that the service represents and/or provides:
