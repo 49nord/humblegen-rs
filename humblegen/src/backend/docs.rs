@@ -1,4 +1,8 @@
-//! Elm code generator.
+//! Generates API documentation for a humble specification file
+
+// Reading this file, you should be aware that we use `format!(include_str!(...), ...)`
+// as a simple HTML template engine. Since `format!` does not support loops,
+// listings are generated using `...map(|thing| format!(include_str!(...), ...)).join("")`.
 
 use crate::ast;
 use crate::backend::elm;
@@ -11,39 +15,10 @@ use std::io::Write;
 use base64;
 use ast::Spec;
 
-struct NavigationLevel {
-    label: String,
-    link: String,
-    children: Vec<NavigationLevel>,
-}
-
-struct SearchResult {
-    term: String,
-    link: NavigationLevel,
-}
-
 #[derive(Default)]
 struct Context {
-    navigation: Vec<NavigationLevel>,
-    searchterms: Vec<SearchResult>,
     body: String,
 }
-
-// struct CloseTag<'a> {
-//     name : &'a str,
-//     out: &'a mut String
-// }
-
-// impl<'a> Drop for CloseTag<'a> {
-//     fn drop(&mut self) {
-//         self.out.push_str(&format!("</{}>", self.name));
-//     }
-// }
-
-// fn html<'a>(out : &'a mut String, name :&'a str) -> CloseTag<'a> {
-//     out.push_str(&format!("<{}>", name));
-//     return CloseTag { name, out }
-// }
 
 /// Wrapper struct which will emit the HTML-escaped version of the contained
 /// string when passed to a format string.
@@ -248,12 +223,12 @@ impl Context {
                             variantNestingDepth = 0,
                             variantNestingParent = "",
                             variantName = Escape(&variant.name),
-                            variantValue = "<i>tuple</i>",
+                            variantValue = Self::type_ident_to_html(&ast::TypeIdent::Tuple(*tuple)),
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
                                 &ComrakOptions::default()
-                            )
-                        ),
+                            ))
+                        ,
 
                         ast::VariantType::Struct(fields) => {
                             let mut rows = vec![format!(
@@ -383,7 +358,7 @@ impl Context {
             ast::TypeIdent::Tuple(tuple) => format!(
                 "({})",
                 tuple
-                    .components()
+                    .elements()
                     .iter()
                     .map(|x| Self::type_ident_to_html(x))
                     .join(", ")

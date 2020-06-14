@@ -1,7 +1,8 @@
 //! Humblegen compiler library
 
 use std::error::Error;
-use std::{env, io, path::{self, Path, }, str};
+use std::{io, path::Path};
+
 pub use ast::Spec;
 
 pub mod ast;
