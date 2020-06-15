@@ -112,6 +112,22 @@ pub enum VariantType {
     Newtype(TypeIdent),
 }
 
+impl VariantType {
+    /// Returns the StructFields if the variant type is Struct.
+    pub fn struct_fields(&self) -> Option<&StructFields> {
+        match self {
+            VariantType::Struct(f) => Some(f),
+            _ => None,
+        }
+    }
+    pub fn struct_fields_mut(&mut self) -> Option<&mut StructFields> {
+        match self {
+            VariantType::Struct(f) => Some(f),
+            _ => None,
+        }
+    }
+}
+
 impl VariantDef {
     /// Returns whether or not a variant is simple.
     fn is_simple(&self) -> bool {
