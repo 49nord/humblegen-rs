@@ -1,0 +1,15 @@
+struct EmbeddedStruct {
+    foo: str,
+}
+
+struct MyStruct {
+    bar: i32,
+    .. EmbeddedStruct,
+}
+
+enum MyEnum {
+   AnonymousStructVariant {
+       bar: i32,
+       .. EmbeddedStruct,
+   }
+}

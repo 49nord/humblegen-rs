@@ -73,22 +73,36 @@ pub(crate) fn resolve_embeds(spec: &mut Spec) {
 fn spec_resolve_embeds_one_level(spec: &mut Spec) -> bool {
     let mut changed = false;
 
-    let all_structs_field_nodes: HashMap<&String, &'_ Vec<FieldNode>> =
-        HashMap::from_iter(spec.iter().filter_map(|spec_item| match spec_item {
-            SpecItem::StructDef(def) => Some((&def.name, &def.fields.0)),
-            _ => None,
-        }));
-
-    let mut replacements: HashMap<String, Vec<FieldNode>> = HashMap::new();
+    let all_structs_field_nodes: HashMap<String, &'_ Vec<FieldNode>> = HashMap::from_iter(
+        spec.iter()
+            .filter_map(|spec_item| match spec_item {
+                SpecItem::StructDef(def) => Some(vec![(def.name.clone(), &def.fields.0)]),
+                _ => None,
+            })
+            .flatten(),
+    );
 
     // find the Vec<FieldNodes> that require expansion ("replacement") and queue those replacement operations
     // in hash map `replacements`
-    for spec_item in spec.iter() {
-        let (struct_name, field_nodes) = match spec_item {
-            SpecItem::StructDef(StructDef { name, fields, .. }) => (name.clone(), &fields.0),
-            _ => continue,
-        };
-
+    let mut replacements: HashMap<String, Vec<FieldNode>> = HashMap::new();
+    let struct_defs = spec
+        .iter()
+        .filter_map(|spec_item| match spec_item {
+            SpecItem::StructDef(def) => Some(vec![(def.name.clone(), &def.fields.0)]),
+            SpecItem::EnumDef(def) => Some(
+                def.variants
+                    .iter()
+                    .filter_map(|v| {
+                        v.variant_type
+                            .struct_fields()
+                            .map(|sf| (format!("{}.{}", def.name, v.name), &sf.0))
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            _ => None,
+        })
+        .flatten();
+    for (struct_name, field_nodes) in struct_defs {
         let new_field_nodes = field_nodes
             .iter()
             .map(|field_node| {
@@ -115,16 +129,26 @@ fn spec_resolve_embeds_one_level(spec: &mut Spec) -> bool {
     drop(all_structs_field_nodes);
 
     // apply replacements
-    for spec_item in spec.iter_mut() {
-        let (struct_name, struct_field_nodes_ptr) = match spec_item {
-            SpecItem::StructDef(StructDef {
-                name,
-                ref mut fields,
-                ..
-            }) => (name.clone(), &mut fields.0),
-            _ => continue,
-        };
-
+    let struct_defs_mut = spec
+        .iter_mut()
+        .filter_map(|spec_item| match spec_item {
+            SpecItem::StructDef(def) => Some(vec![(def.name.clone(), &mut def.fields.0)]),
+            SpecItem::EnumDef(def) => Some({
+                let enum_name = def.name.clone();
+                def.variants
+                    .iter_mut()
+                    .filter_map(|v| {
+                        let anon_struct_name = format!("{}.{}", enum_name, v.name);
+                        v.variant_type
+                            .struct_fields_mut()
+                            .map(|sf| (anon_struct_name, &mut sf.0))
+                    })
+                    .collect::<Vec<_>>()
+            }),
+            _ => None,
+        })
+        .flatten();
+    for (struct_name, struct_field_nodes_ptr) in struct_defs_mut {
         let (_, new_field_nodes) = match replacements.remove_entry(&struct_name) {
             Some(n) => n,
             None => continue,
