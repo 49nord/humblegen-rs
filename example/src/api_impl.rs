@@ -24,7 +24,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn get_monsters_id(
         &self,
-        _id: String,
+        _id: i32,
     ) -> protocol::Response<Result<protocol::Monster, protocol::MonsterError>> {
         // demonstrate how service-specific errors are handled
         Ok(Err(protocol::MonsterError::TooWeak))

@@ -40,7 +40,8 @@ The representation adheres to the following "schema", which is basically what th
         "Runtime": "NoServiceMounted",
         "Runtime": "ServiceMountsAmbiguous",
         "Runtime": { "NoRouteMountedInService": { "service": "..." } },
-        "Runtime": { "RouteMountsAmbiguous":    { "service": "...  } },
+        "Runtime": { "RouteMountsAmbiguous":    { "service": "..."  } },
+        "Runtime": { "RouteParamInvalid": { "param_name": "ROUTE_PARAM_NAME", "parse_error": "..." } },
         "Runtime": { "QueryInvalid": "..." },
         "Runtime": { "PostBodyReadError": "..." },
         "Runtime": { "PostBodyInvalid": "..." }

@@ -50,8 +50,16 @@ pub enum ServiceError {
 pub enum RuntimeError {
     NoServiceMounted,
     ServiceMountsAmbiguous,
-    NoRouteMountedInService { service: String },
-    RouteMountsAmbiguous { service: String },
+    NoRouteMountedInService {
+        service: String,
+    },
+    RouteMountsAmbiguous {
+        service: String,
+    },
+    RouteParamInvalid {
+        param_name: String,
+        parse_error: String,
+    },
     QueryInvalid(String),
     PostBodyReadError(String),
     PostBodyInvalid(String),
@@ -97,6 +105,7 @@ impl RuntimeError {
             RuntimeError::NoRouteMountedInService { .. } => 404,
             RuntimeError::RouteMountsAmbiguous { .. } => 500,
             RuntimeError::ServiceMountsAmbiguous => 500,
+            RuntimeError::RouteParamInvalid { .. } => 400,
             RuntimeError::QueryInvalid(_) => 400,
             RuntimeError::PostBodyReadError(_) => 400,
             RuntimeError::PostBodyInvalid(_) => 400,

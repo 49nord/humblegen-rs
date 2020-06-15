@@ -4,6 +4,20 @@ use crate::service_protocol::ErrorResponse;
 use crate::service_protocol::RuntimeError;
 use crate::service_protocol::ToErrorResponse;
 
+pub fn deser_param<T, E>(name: &str, value: &str) -> Result<T, ErrorResponse>
+where
+    E: std::fmt::Display,
+    T: std::str::FromStr<Err = E>,
+{
+    std::primitive::str::parse(value).map_err(|e| {
+        RuntimeError::RouteParamInvalid {
+            param_name: name.to_owned(),
+            parse_error: format!("{}", e),
+        }
+        .to_error_response()
+    })
+}
+
 /// Helper function used by generated code to deserialize POST body data.
 pub async fn deser_post_data<T: serde::de::DeserializeOwned>(
     req_body: &mut hyper::Body,

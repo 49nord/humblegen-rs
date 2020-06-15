@@ -63,7 +63,6 @@ enum ServiceRouteComponent {
         spec_arg_name: String,
         rust_var_ident: proc_macro2::Ident,
         rust_var_type: TokenStream,
-        rust_deser_fn: TokenStream,
         url_regex_str: String,
     },
 }
@@ -84,8 +83,10 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
     out.extend(quote! {
         #[allow(unused_imports)]
         use ::humblegen_rt::deser_helpers::{
-            deser_post_data, deser_query_primitive, deser_query_serde_urlencoded,
+            deser_post_data, deser_query_primitive, deser_query_serde_urlencoded, deser_param,
         };
+        #[allow(unused_imports)]
+        use ::humblegen_rt::service_protocol::ErrorResponse;
         #[allow(unused_imports)]
         pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceError};
         #[allow(unused_imports)]
@@ -304,26 +305,19 @@ fn render_service(service: &Service) -> TokenStream {
             .join("");
         let regex_str = format!("^{}$", regex_str);
 
-        // what goes into the handler method invocation's argument list: (arg_name, let arg_name =  ...;)
-        let mut arg_list_and_defs = vec![];
         // post body
-        arg_list_and_defs.extend(r.post_body_type.iter().map(|_| {
-            (
-                quote! { post_body },
-                quote! { },
-            )
-        }));
+        let post_body_var = r.post_body_type.iter().map(|_| {
+                quote! { post_body }
+        }).collect::<Vec<_>>();
         let post_body_def = r.post_body_type.as_ref().map(|pbt| quote!{
             let post_body: #pbt =
             deser_post_data(req.body_mut()).await?;
         });
+
         // query
-        arg_list_and_defs.extend(r.query_type.iter().map(|_| {
-            (
-                quote!{ query },
-                quote!{},
-            )
-        }));
+        let query_var = r.query_type.iter().map(|_| {
+                quote!{ query }
+        }).collect::<Vec<_>>();
         let query_deser_fn = &r.query_deser_fn;
         let query_def = r.query_type.as_ref().map(|qt| quote!{
             let query: Option<#qt> = match req.uri().query() {
@@ -331,26 +325,31 @@ fn render_service(service: &Service) -> TokenStream {
                 Some(q) => Some(#query_deser_fn(q)?),
             };
         });
+
         // route params
-        arg_list_and_defs.extend(r.components.iter().filter_map(|c| match c {
+        let (route_param_vars, route_param_parse_stmts): (Vec<TokenStream>, Vec<TokenStream>) = r.components.iter().filter_map(|c| match c {
             ServiceRouteComponent::Literal { .. } => None,
             ServiceRouteComponent::Param {
                 spec_arg_name,
                 rust_var_ident,
                 rust_var_type,
-                rust_deser_fn,
                 ..
             } => Some((
                 quote! { #rust_var_ident },
-                quote! {
-                    let #rust_var_ident: #rust_var_type =
-                        #rust_deser_fn (&captures[ #spec_arg_name ]) ;},
+                quote! { let #rust_var_ident: Result<#rust_var_type, ErrorResponse> = deser_param( #spec_arg_name,  &captures[ #spec_arg_name ]); },
             )),
-        }));
-        let (arg_list, arg_defs): (Vec<TokenStream>, Vec<TokenStream>) =
-            arg_list_and_defs.into_iter().unzip();
-        let (arg_list, arg_defs) = (arg_list.into_iter(), arg_defs.into_iter());
+        }).unzip();
 
+        let mut arg_list = Vec::new();
+        arg_list.extend(&post_body_var);
+        arg_list.extend(&query_var);
+        arg_list.extend(&route_param_vars);
+
+
+        let route_param_parse_stmts = route_param_parse_stmts.into_iter();
+        let route_param_vars2 = route_param_vars.iter();
+        let route_param_vars = route_param_vars.iter();
+        let arg_list = arg_list.into_iter();
         quote! {
             {
                 let handler = Arc::clone(&handler);
@@ -361,8 +360,12 @@ fn render_service(service: &Service) -> TokenStream {
                         move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
                         captures| {
                             let handler = Arc::clone(&handler);
-                            #(#arg_defs);*
+                            // We cannot move the regex captures into the async closure, thus do the parsing
+                            // of route params outside of the closure and move the parsing results into it.
+                            // Inside the closure, `?` the results and return the param deserialization error.
+                            #(#route_param_parse_stmts);*
                             Box::pin(async move {
+                                #(let #route_param_vars = #route_param_vars2?;)*
                                 #query_def
                                 #post_body_def
                                 Ok(handler_response_to_hyper_response(handler.#traitfn_ident( #(#arg_list),* ).await))
@@ -410,7 +413,8 @@ fn lower_all_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
 
 /// Helper function for lowering an `ast::ServiceEndpoint` into a `ServiceRoute`.
 fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
-    let components = endpoint.route
+    let components = endpoint
+        .route
         .components()
         .iter()
         .map(|c| match c {
@@ -420,20 +424,12 @@ fn lower_service_route(endpoint: &ast::ServiceEndpoint) -> ServiceRoute {
             ast::ServiceRouteComponent::Variable(ast::FieldDefPair { name, type_ident }) => {
                 let rust_var_ident = format_ident!("{}", name);
                 let rust_var_type = render_type_ident(type_ident);
-                let (url_regex_str, rust_deser_fn) = match type_ident {
-                    ast::TypeIdent::BuiltIn(builtin) => match builtin {
-                        ast::AtomType::Str => (r"[^/]+", quote!{ {|s| ::std::primitive::str::parse(s).expect("regex should prevent parse errors") } }),
-                        x => todo!("atom type {:?} in route paramter likely easy impl", x),
-                    },
-                    x => unreachable!("grammar error in route param rule: {:?}", x),
-                };
-                let url_regex_str = url_regex_str.to_owned();
+                let url_regex_str = r"[^/]+".to_owned();
                 ServiceRouteComponent::Param {
                     spec_arg_name: name.clone(),
                     url_regex_str,
                     rust_var_ident,
                     rust_var_type,
-                    rust_deser_fn,
                 }
             }
         })

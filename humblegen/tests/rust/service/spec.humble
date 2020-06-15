@@ -56,7 +56,7 @@ service Godzilla {
     /// Get foo.
     GET /foo -> u32,
     /// Get monster by id
-    GET /monsters/{id: str} -> result[Monster][MonsterError],
+    GET /monsters/{id: i32} -> result[Monster][MonsterError],
     /// Get monster by posting a query
     GET /monsters?{MonsterQuery} -> list[Monster],   // user-defined query type:    uses serde_urlencoded to decode query as a application/x-www-form-urlencoded
     GET /monsters2?{str} -> list[Monster],           // all other types:            uses  ::std::primitive::str::parse

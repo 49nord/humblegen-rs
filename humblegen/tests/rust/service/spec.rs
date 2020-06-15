@@ -71,7 +71,7 @@ pub struct MonsterQuery {
 }
 #[allow(unused_imports)]
 use ::humblegen_rt::deser_helpers::{
-    deser_post_data, deser_query_primitive, deser_query_serde_urlencoded,
+    deser_param, deser_post_data, deser_query_primitive, deser_query_serde_urlencoded,
 };
 #[allow(unused_imports)]
 pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceError};
@@ -79,6 +79,8 @@ pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceErro
 use ::humblegen_rt::regexset_map::RegexSetMap;
 #[allow(unused_imports)]
 use ::humblegen_rt::server::{self, handler_response_to_hyper_response, Route, Service};
+#[allow(unused_imports)]
+use ::humblegen_rt::service_protocol::ErrorResponse;
 #[allow(unused_imports)]
 use ::std::sync::Arc;
 use std::net::SocketAddr;
@@ -153,15 +155,15 @@ impl std::fmt::Debug for Handler {
     }
 }
 #[doc = "service Godzilla provides services related to monsters."]
-#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Godzilla {\n    async fn get_foo(&self) -> Response<u32>;\n    async fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>>;\n    async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;\n    async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;\n    async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;\n    async fn get_monsters_4(&self) -> Response<Vec<Monster>>;\n    async fn post_monsters(\n        &self,\n        post_body: MonsterData,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn put_monsters_id(\n        &self,\n        post_body: Monster,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn patch_monsters_id(\n        &self,\n        post_body: MonsterPatch,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;\n    async fn get_version(&self) -> Response<String>;\n    async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;\n}\n\n```"]
+#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Godzilla {\n    async fn get_foo(&self) -> Response<u32>;\n    async fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>>;\n    async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;\n    async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;\n    async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;\n    async fn get_monsters_4(&self) -> Response<Vec<Monster>>;\n    async fn post_monsters(\n        &self,\n        post_body: MonsterData,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn put_monsters_id(\n        &self,\n        post_body: Monster,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn patch_monsters_id(\n        &self,\n        post_body: MonsterPatch,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;\n    async fn get_version(&self) -> Response<String>;\n    async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;\n}\n\n```"]
 #[humblegen_rt::async_trait(Sync)]
 pub trait Godzilla {
     #[doc = "```\nasync fn get_foo(&self) -> Response<u32> {}\n\n```"]
     #[doc = "Get foo."]
     async fn get_foo(&self) -> Response<u32>;
-    #[doc = "```\nasync fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
+    #[doc = "```\nasync fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
     #[doc = "Get monster by id"]
-    async fn get_monsters_id(&self, id: String) -> Response<Result<Monster, MonsterError>>;
+    async fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>>;
     #[doc = "```\nasync fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = "Get monster by posting a query"]
     async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;
@@ -236,13 +238,9 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                     move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
                           captures| {
                         let handler = Arc::clone(&handler);
-                        let id: String = {
-                            |s| {
-                                ::std::primitive::str::parse(s)
-                                    .expect("regex should prevent parse errors")
-                            }
-                        }(&captures["id"]);
+                        let id: Result<i32, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
+                            let id = id?;
                             Ok(handler_response_to_hyper_response(
                                 handler.get_monsters_id(id).await,
                             ))
@@ -363,13 +361,9 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                     move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
                           captures| {
                         let handler = Arc::clone(&handler);
-                        let id: String = {
-                            |s| {
-                                ::std::primitive::str::parse(s)
-                                    .expect("regex should prevent parse errors")
-                            }
-                        }(&captures["id"]);
+                        let id: Result<String, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
+                            let id = id?;
                             let post_body: Monster = deser_post_data(req.body_mut()).await?;
                             Ok(handler_response_to_hyper_response(
                                 handler.put_monsters_id(post_body, id).await,
@@ -388,13 +382,9 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                     move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
                           captures| {
                         let handler = Arc::clone(&handler);
-                        let id: String = {
-                            |s| {
-                                ::std::primitive::str::parse(s)
-                                    .expect("regex should prevent parse errors")
-                            }
-                        }(&captures["id"]);
+                        let id: Result<String, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
+                            let id = id?;
                             let post_body: MonsterPatch = deser_post_data(req.body_mut()).await?;
                             Ok(handler_response_to_hyper_response(
                                 handler.patch_monsters_id(post_body, id).await,
@@ -413,13 +403,9 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                     move |mut req: ::humblegen_rt::hyper::Request<::humblegen_rt::hyper::Body>,
                           captures| {
                         let handler = Arc::clone(&handler);
-                        let id: String = {
-                            |s| {
-                                ::std::primitive::str::parse(s)
-                                    .expect("regex should prevent parse errors")
-                            }
-                        }(&captures["id"]);
+                        let id: Result<String, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
+                            let id = id?;
                             Ok(handler_response_to_hyper_response(
                                 handler.delete_monster_id(id).await,
                             ))
