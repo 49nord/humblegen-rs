@@ -76,6 +76,8 @@ use ::humblegen_rt::deser_helpers::{
 #[allow(unused_imports)]
 pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceError};
 #[allow(unused_imports)]
+use ::humblegen_rt::hyper;
+#[allow(unused_imports)]
 use ::humblegen_rt::regexset_map::RegexSetMap;
 #[allow(unused_imports)]
 use ::humblegen_rt::server::{self, handler_response_to_hyper_response, Route, Service};
@@ -104,7 +106,11 @@ impl Builder {
     #[doc = r#" and `root="/api"` will expose"#]
     #[doc = r" * handler method `fn bar() -> i32` at `/api/bar` and"]
     #[doc = r" * handler method `fn baz() -> String` at `/api/baz`"]
-    pub fn add(mut self, root: &str, handler: Handler) -> Self {
+    pub fn add<Context: Default + Sized + Send + Sync>(
+        mut self,
+        root: &str,
+        handler: Handler<Context>,
+    ) -> Self {
         if !root.starts_with('/') {
             panic!("root must start with \"/\"")
         } else if root.ends_with('/') {
@@ -133,11 +139,11 @@ impl Builder {
 #[doc = r" Wrapper enum with one variant for each service defined in the humble spec."]
 #[doc = r" Used to pass instantiated handler trait objects to `Builder::add`."]
 #[allow(dead_code)]
-pub enum Handler {
-    Godzilla(Arc<dyn Godzilla + Send + Sync>),
-    Movies(Arc<dyn Movies + Send + Sync>),
+pub enum Handler<Context: Default + Sized + Send + Sync + 'static> {
+    Godzilla(Arc<dyn Godzilla<Context = Context> + Send + Sync>),
+    Movies(Arc<dyn Movies<Context = Context> + Send + Sync>),
 }
-impl Handler {
+impl<Context: Default + Sized + Send + Sync + 'static> Handler<Context> {
     fn into_routes(self) -> Vec<Route> {
         match self {
             Handler::Godzilla(h) => routes_Godzilla(h),
@@ -145,7 +151,7 @@ impl Handler {
         }
     }
 }
-impl std::fmt::Debug for Handler {
+impl<Context: Default + Sized + Send + Sync + 'static> std::fmt::Debug for Handler<Context> {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Handler::Godzilla(_) => write!(formatter, "{}", "Godzilla")?,
@@ -155,63 +161,98 @@ impl std::fmt::Debug for Handler {
     }
 }
 #[doc = "service Godzilla provides services related to monsters."]
-#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Godzilla {\n    async fn get_foo(&self) -> Response<u32>;\n    async fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>>;\n    async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;\n    async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;\n    async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;\n    async fn get_monsters_4(&self) -> Response<Vec<Monster>>;\n    async fn post_monsters(\n        &self,\n        post_body: MonsterData,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn put_monsters_id(\n        &self,\n        post_body: Monster,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn patch_monsters_id(\n        &self,\n        post_body: MonsterPatch,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;\n    async fn get_version(&self) -> Response<String>;\n    async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;\n}\n\n```"]
+#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Godzilla {\n    type Context: Default + Sized + Send + Sync;\n    async fn intercept_handler_pre(\n        &self,\n        _req: &hyper::Request<hyper::Body>,\n    ) -> Result<Self::Context, ServiceError> {\n        Ok(Self::Context::default())\n    }\n    async fn get_foo(&self, ctx: Self::Context) -> Response<u32>;\n    async fn get_monsters_id(\n        &self,\n        ctx: Self::Context,\n        id: i32,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn get_monsters(\n        &self,\n        ctx: Self::Context,\n        query: Option<MonsterQuery>,\n    ) -> Response<Vec<Monster>>;\n    async fn get_monsters_2(\n        &self,\n        ctx: Self::Context,\n        query: Option<String>,\n    ) -> Response<Vec<Monster>>;\n    async fn get_monsters_3(\n        &self,\n        ctx: Self::Context,\n        query: Option<i32>,\n    ) -> Response<Vec<Monster>>;\n    async fn get_monsters_4(&self, ctx: Self::Context) -> Response<Vec<Monster>>;\n    async fn post_monsters(\n        &self,\n        ctx: Self::Context,\n        post_body: MonsterData,\n    ) -> Response<Result<Monster, MonsterError>>;\n    async fn put_monsters_id(\n        &self,\n        ctx: Self::Context,\n        post_body: Monster,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn patch_monsters_id(\n        &self,\n        ctx: Self::Context,\n        post_body: MonsterPatch,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn delete_monster_id(\n        &self,\n        ctx: Self::Context,\n        id: String,\n    ) -> Response<Result<(), MonsterError>>;\n    async fn get_version(&self, ctx: Self::Context) -> Response<String>;\n    async fn get_tokio_police_locations(\n        &self,\n        ctx: Self::Context,\n    ) -> Response<Result<Vec<PoliceCar>, PoliceError>>;\n}\n\n```"]
 #[humblegen_rt::async_trait(Sync)]
 pub trait Godzilla {
-    #[doc = "```\nasync fn get_foo(&self) -> Response<u32> {}\n\n```"]
+    type Context: Default + Sized + Send + Sync;
+    async fn intercept_handler_pre(
+        &self,
+        _req: &hyper::Request<hyper::Body>,
+    ) -> Result<Self::Context, ServiceError> {
+        Ok(Self::Context::default())
+    }
+    #[doc = "```\nasync fn get_foo(&self, ctx: Self::Context) -> Response<u32> {}\n\n```"]
     #[doc = "Get foo."]
-    async fn get_foo(&self) -> Response<u32>;
-    #[doc = "```\nasync fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
+    async fn get_foo(&self, ctx: Self::Context) -> Response<u32>;
+    #[doc = "```\nasync fn get_monsters_id(\n    &self,\n    ctx: Self::Context,\n    id: i32,\n) -> Response<Result<Monster, MonsterError>> {\n}\n\n```"]
     #[doc = "Get monster by id"]
-    async fn get_monsters_id(&self, id: i32) -> Response<Result<Monster, MonsterError>>;
-    #[doc = "```\nasync fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>> {}\n\n```"]
+    async fn get_monsters_id(
+        &self,
+        ctx: Self::Context,
+        id: i32,
+    ) -> Response<Result<Monster, MonsterError>>;
+    #[doc = "```\nasync fn get_monsters(\n    &self,\n    ctx: Self::Context,\n    query: Option<MonsterQuery>,\n) -> Response<Vec<Monster>> {\n}\n\n```"]
     #[doc = "Get monster by posting a query"]
-    async fn get_monsters(&self, query: Option<MonsterQuery>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>> {}\n\n```"]
+    async fn get_monsters(
+        &self,
+        ctx: Self::Context,
+        query: Option<MonsterQuery>,
+    ) -> Response<Vec<Monster>>;
+    #[doc = "```\nasync fn get_monsters_2(\n    &self,\n    ctx: Self::Context,\n    query: Option<String>,\n) -> Response<Vec<Monster>> {\n}\n\n```"]
     #[doc = ""]
-    async fn get_monsters_2(&self, query: Option<String>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>> {}\n\n```"]
+    async fn get_monsters_2(
+        &self,
+        ctx: Self::Context,
+        query: Option<String>,
+    ) -> Response<Vec<Monster>>;
+    #[doc = "```\nasync fn get_monsters_3(&self, ctx: Self::Context, query: Option<i32>) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = ""]
-    async fn get_monsters_3(&self, query: Option<i32>) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn get_monsters_4(&self) -> Response<Vec<Monster>> {}\n\n```"]
+    async fn get_monsters_3(
+        &self,
+        ctx: Self::Context,
+        query: Option<i32>,
+    ) -> Response<Vec<Monster>>;
+    #[doc = "```\nasync fn get_monsters_4(&self, ctx: Self::Context) -> Response<Vec<Monster>> {}\n\n```"]
     #[doc = ""]
-    async fn get_monsters_4(&self) -> Response<Vec<Monster>>;
-    #[doc = "```\nasync fn post_monsters(&self, post_body: MonsterData) -> Response<Result<Monster, MonsterError>> {}\n\n```"]
+    async fn get_monsters_4(&self, ctx: Self::Context) -> Response<Vec<Monster>>;
+    #[doc = "```\nasync fn post_monsters(\n    &self,\n    ctx: Self::Context,\n    post_body: MonsterData,\n) -> Response<Result<Monster, MonsterError>> {\n}\n\n```"]
     #[doc = "Create a new monster."]
     async fn post_monsters(
         &self,
+        ctx: Self::Context,
         post_body: MonsterData,
     ) -> Response<Result<Monster, MonsterError>>;
-    #[doc = "```\nasync fn put_monsters_id(\n    &self,\n    post_body: Monster,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
+    #[doc = "```\nasync fn put_monsters_id(\n    &self,\n    ctx: Self::Context,\n    post_body: Monster,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
     #[doc = "Overwrite a monster."]
     async fn put_monsters_id(
         &self,
+        ctx: Self::Context,
         post_body: Monster,
         id: String,
     ) -> Response<Result<(), MonsterError>>;
-    #[doc = "```\nasync fn patch_monsters_id(\n    &self,\n    post_body: MonsterPatch,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
+    #[doc = "```\nasync fn patch_monsters_id(\n    &self,\n    ctx: Self::Context,\n    post_body: MonsterPatch,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
     #[doc = "Patch a monster."]
     async fn patch_monsters_id(
         &self,
+        ctx: Self::Context,
         post_body: MonsterPatch,
         id: String,
     ) -> Response<Result<(), MonsterError>>;
-    #[doc = "```\nasync fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>> {}\n\n```"]
+    #[doc = "```\nasync fn delete_monster_id(\n    &self,\n    ctx: Self::Context,\n    id: String,\n) -> Response<Result<(), MonsterError>> {\n}\n\n```"]
     #[doc = "Delete a monster"]
-    async fn delete_monster_id(&self, id: String) -> Response<Result<(), MonsterError>>;
-    #[doc = "```\nasync fn get_version(&self) -> Response<String> {}\n\n```"]
+    async fn delete_monster_id(
+        &self,
+        ctx: Self::Context,
+        id: String,
+    ) -> Response<Result<(), MonsterError>>;
+    #[doc = "```\nasync fn get_version(&self, ctx: Self::Context) -> Response<String> {}\n\n```"]
     #[doc = ""]
-    async fn get_version(&self) -> Response<String>;
-    #[doc = "```\nasync fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>> {}\n\n```"]
+    async fn get_version(&self, ctx: Self::Context) -> Response<String>;
+    #[doc = "```\nasync fn get_tokio_police_locations(\n    &self,\n    ctx: Self::Context,\n) -> Response<Result<Vec<PoliceCar>, PoliceError>> {\n}\n\n```"]
     #[doc = ""]
-    async fn get_tokio_police_locations(&self) -> Response<Result<Vec<PoliceCar>, PoliceError>>;
+    async fn get_tokio_police_locations(
+        &self,
+        ctx: Self::Context,
+    ) -> Response<Result<Vec<PoliceCar>, PoliceError>>;
 }
 #[allow(unused_variables)]
 #[allow(unused_mut)]
 #[allow(non_snake_case)]
 #[allow(clippy::trivial_regex)]
 #[allow(clippy::single_char_pattern)]
-fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
+fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
+    handler: Arc<dyn Godzilla<Context = Context> + Send + Sync>,
+) -> Vec<Route> {
     vec![
         {
             let handler = Arc::clone(&handler);
@@ -223,7 +264,15 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                           captures| {
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
-                            Ok(handler_response_to_hyper_response(handler.get_foo().await))
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
+                            Ok(handler_response_to_hyper_response(
+                                handler.get_foo(ctx).await,
+                            ))
                         })
                     },
                 ),
@@ -241,8 +290,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                         let id: Result<i32, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
                             let id = id?;
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_id(id).await,
+                                handler.get_monsters_id(ctx, id).await,
                             ))
                         })
                     },
@@ -263,8 +318,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                                 None => None,
                                 Some(q) => Some(deser_query_serde_urlencoded(q)?),
                             };
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_monsters(query).await,
+                                handler.get_monsters(ctx, query).await,
                             ))
                         })
                     },
@@ -285,8 +346,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                                 None => None,
                                 Some(q) => Some(deser_query_primitive(q)?),
                             };
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_2(query).await,
+                                handler.get_monsters_2(ctx, query).await,
                             ))
                         })
                     },
@@ -307,8 +374,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                                 None => None,
                                 Some(q) => Some(deser_query_primitive(q)?),
                             };
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_3(query).await,
+                                handler.get_monsters_3(ctx, query).await,
                             ))
                         })
                     },
@@ -325,8 +398,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                           captures| {
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_4().await,
+                                handler.get_monsters_4(ctx).await,
                             ))
                         })
                     },
@@ -344,8 +423,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
                             let post_body: MonsterData = deser_post_data(req.body_mut()).await?;
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.post_monsters(post_body).await,
+                                handler.post_monsters(ctx, post_body).await,
                             ))
                         })
                     },
@@ -365,8 +450,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                         Box::pin(async move {
                             let id = id?;
                             let post_body: Monster = deser_post_data(req.body_mut()).await?;
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.put_monsters_id(post_body, id).await,
+                                handler.put_monsters_id(ctx, post_body, id).await,
                             ))
                         })
                     },
@@ -386,8 +477,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                         Box::pin(async move {
                             let id = id?;
                             let post_body: MonsterPatch = deser_post_data(req.body_mut()).await?;
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.patch_monsters_id(post_body, id).await,
+                                handler.patch_monsters_id(ctx, post_body, id).await,
                             ))
                         })
                     },
@@ -406,8 +503,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                         let id: Result<String, ErrorResponse> = deser_param("id", &captures["id"]);
                         Box::pin(async move {
                             let id = id?;
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.delete_monster_id(id).await,
+                                handler.delete_monster_id(ctx, id).await,
                             ))
                         })
                     },
@@ -424,8 +527,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                           captures| {
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_version().await,
+                                handler.get_version(ctx).await,
                             ))
                         })
                     },
@@ -442,8 +551,14 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
                           captures| {
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
+                            use ::humblegen_rt::service_protocol::ToErrorResponse;
+                            let ctx = handler
+                                .intercept_handler_pre(&req)
+                                .await
+                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                .map_err(|e| e.to_error_response())?;
                             Ok(handler_response_to_hyper_response(
-                                handler.get_tokio_police_locations().await,
+                                handler.get_tokio_police_locations(ctx).await,
                             ))
                         })
                     },
@@ -453,14 +568,24 @@ fn routes_Godzilla(handler: Arc<dyn Godzilla + Send + Sync>) -> Vec<Route> {
     ]
 }
 #[doc = ""]
-#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Movies {}\n\n```"]
+#[doc = "```\n#[humblegen_rt::async_trait(Sync)]\npub trait Movies {\n    type Context: Default + Sized + Send + Sync;\n    async fn intercept_handler_pre(\n        &self,\n        _req: &hyper::Request<hyper::Body>,\n    ) -> Result<Self::Context, ServiceError> {\n        Ok(Self::Context::default())\n    }\n}\n\n```"]
 #[humblegen_rt::async_trait(Sync)]
-pub trait Movies {}
+pub trait Movies {
+    type Context: Default + Sized + Send + Sync;
+    async fn intercept_handler_pre(
+        &self,
+        _req: &hyper::Request<hyper::Body>,
+    ) -> Result<Self::Context, ServiceError> {
+        Ok(Self::Context::default())
+    }
+}
 #[allow(unused_variables)]
 #[allow(unused_mut)]
 #[allow(non_snake_case)]
 #[allow(clippy::trivial_regex)]
 #[allow(clippy::single_char_pattern)]
-fn routes_Movies(handler: Arc<dyn Movies + Send + Sync>) -> Vec<Route> {
+fn routes_Movies<Context: Default + Sized + Send + Sync + 'static>(
+    handler: Arc<dyn Movies<Context = Context> + Send + Sync>,
+) -> Vec<Route> {
     vec![]
 }

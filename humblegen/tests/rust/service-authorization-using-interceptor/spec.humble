@@ -1,0 +1,9 @@
+struct Post {
+    content: str
+}
+
+service BlogApi {
+    /// Must send header `Authorization: Custom AUTHZ_TOKEN`
+    /// otherwise authorization error.
+    POST /{user: str}/posts -> Post -> Post,
+}
