@@ -12,7 +12,9 @@ pub struct MonsterApiImpl {
 
 #[async_trait(Sync)]
 impl protocol::Godzilla for MonsterApiImpl {
-    async fn get_foo(&self) -> protocol::Response<u32> {
+    type Context = ();
+
+    async fn get_foo(&self, _ctx: Self::Context) -> protocol::Response<u32> {
         // simulate authorization failure for every other request
         let v = self.ctr.fetch_add(1, SeqCst);
         if v % 2 == 0 {
@@ -24,6 +26,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn get_monsters_id(
         &self,
+        _ctx: Self::Context,
         _id: i32,
     ) -> protocol::Response<Result<protocol::Monster, protocol::MonsterError>> {
         // demonstrate how service-specific errors are handled
@@ -32,6 +35,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn get_monsters(
         &self,
+        _ctx: Self::Context,
         query: Option<protocol::MonsterQuery>,
     ) -> protocol::Response<Vec<protocol::Monster>> {
         // the query-part of the URL is deserialized into argument `query` if specified by the user
@@ -43,6 +47,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn post_monsters(
         &self,
+        _ctx: Self::Context,
         post_body: protocol::MonsterData,
     ) -> protocol::Response<Result<protocol::Monster, protocol::MonsterError>> {
         // the POST body is made available as argument `post_body`
@@ -55,6 +60,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn get_monsters_2(
         &self,
+        _ctx: Self::Context,
         query: Option<String>,
     ) -> protocol::Response<Vec<protocol::Monster>> {
         dbg!(query);
@@ -63,6 +69,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn get_monsters_3(
         &self,
+        _ctx: Self::Context,
         query: Option<i32>,
     ) -> protocol::Response<Vec<protocol::Monster>> {
         // non-struct queries are deserialized
@@ -70,22 +77,27 @@ impl protocol::Godzilla for MonsterApiImpl {
         unimplemented!()
     }
 
-    async fn get_monsters_4(&self) -> protocol::Response<Vec<protocol::Monster>> {
+    async fn get_monsters_4(
+        &self,
+        _ctx: Self::Context,
+    ) -> protocol::Response<Vec<protocol::Monster>> {
         unimplemented!()
     }
 
-    async fn get_version(&self) -> protocol::Response<String> {
+    async fn get_version(&self, _ctx: Self::Context) -> protocol::Response<String> {
         unimplemented!()
     }
 
     async fn get_tokio_police_locations(
         &self,
+        _ctx: Self::Context,
     ) -> protocol::Response<Result<Vec<protocol::PoliceCar>, protocol::PoliceError>> {
         unimplemented!()
     }
 
     async fn delete_monster_id(
         &self,
+        _ctx: Self::Context,
         id: String,
     ) -> protocol::Response<Result<(), protocol::MonsterError>> {
         println!("would delete id={}", id);
@@ -94,6 +106,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn put_monsters_id(
         &self,
+        _ctx: Self::Context,
         monster: protocol::Monster,
         id: String,
     ) -> protocol::Response<Result<(), protocol::MonsterError>> {
@@ -103,6 +116,7 @@ impl protocol::Godzilla for MonsterApiImpl {
 
     async fn patch_monsters_id(
         &self,
+        _ctx: Self::Context,
         patch: protocol::MonsterPatch,
         id: String,
     ) -> protocol::Response<Result<(), protocol::MonsterError>> {
@@ -115,4 +129,6 @@ impl protocol::Godzilla for MonsterApiImpl {
 #[derive(Default)]
 pub struct MoviesApiImpl {}
 
-impl protocol::Movies for MoviesApiImpl {}
+impl protocol::Movies for MoviesApiImpl {
+    type Context = ();
+}

@@ -14,7 +14,7 @@ pub struct ErrorResponse {
     pub kind: ErrorResponseKind,
 }
 
-pub(crate) trait ToErrorResponse {
+pub trait ToErrorResponse {
     fn to_error_response(self) -> ErrorResponse;
 }
 

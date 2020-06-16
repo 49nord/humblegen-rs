@@ -96,6 +96,8 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         #[allow(unused_imports)]
         use ::std::sync::Arc;
         use std::net::SocketAddr;
+        #[allow(unused_imports)]
+        use ::humblegen_rt::hyper;
 
         /// Builds an HTTP server that exposes services implemented by handler trait objects.
         #[derive(Debug)]
@@ -119,7 +121,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
             /// and `root="/api"` will expose
             /// * handler method `fn bar() -> i32` at `/api/bar` and
             /// * handler method `fn baz() -> String` at `/api/baz`
-            pub fn add(mut self, root: &str, handler: Handler) -> Self {
+            pub fn add<Context: Default + Sized + Send + Sync>(mut self, root: &str, handler: Handler<Context>) -> Self {
                 if !root.starts_with('/') {
                     panic!("root must start with \"/\"")
                 } else  if root.ends_with('/') {
@@ -153,7 +155,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         .map(|s| {
             let Service { trait_name, .. } = s;
             quote! {
-                #trait_name(Arc<dyn #trait_name + Send + Sync>)
+                #trait_name(Arc<dyn #trait_name<Context=Context> + Send + Sync>)
             }
         })
         .collect();
@@ -186,11 +188,11 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         /// Wrapper enum with one variant for each service defined in the humble spec.
         /// Used to pass instantiated handler trait objects to `Builder::add`.
         #[allow(dead_code)]
-        pub enum Handler {
+        pub enum Handler<Context: Default + Sized + Send + Sync + 'static> {
             #(#handler_enum_variants,)*
         }
 
-        impl Handler {
+        impl<Context: Default + Sized + Send + Sync + 'static> Handler<Context> {
             fn into_routes(self) -> Vec<Route> {
                 match self {
                     #(#handler_into_routes_match_arms,)*
@@ -198,7 +200,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
             }
         }
 
-        impl std::fmt::Debug for Handler {
+        impl<Context: Default + Sized + Send + Sync + 'static> std::fmt::Debug for Handler<Context> {
             fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     #(#handler_debug_arms,)*
@@ -237,6 +239,7 @@ fn render_service(service: &Service) -> TokenStream {
             } = r;
             let mut param_list = vec![];
             param_list.push(quote! {&self});
+            param_list.push(quote! {ctx: Self::Context});
             param_list.extend(post_body_type.iter().map(|t| quote! { post_body: #t }));
             param_list.extend(query_type.iter().map(|t| quote! { query: Option<#t> }));
             param_list.extend(components.iter().filter_map(|c| match c {
@@ -265,10 +268,19 @@ fn render_service(service: &Service) -> TokenStream {
         })
         .unzip();
     let trait_name = &service.trait_name;
+    let trait_def_interceptor_fn = quote! {
+        type Context: Default + Sized + Send + Sync;
+        async fn intercept_handler_pre(&self,
+            _req: &hyper::Request<hyper::Body>,
+        ) -> Result<Self::Context, ServiceError> {
+            Ok(Self::Context::default())
+        }
+    };
     let trait_def_as_doc_comment = {
         let d = quote! {
             #[humblegen_rt::async_trait(Sync)]
             pub trait #trait_name {
+                #trait_def_interceptor_fn
                 #(#trait_fns_without_comment ;)*
             }
         };
@@ -279,6 +291,7 @@ fn render_service(service: &Service) -> TokenStream {
         #[doc = #trait_def_as_doc_comment ]
         #[humblegen_rt::async_trait(Sync)]
         pub trait #trait_name {
+            #trait_def_interceptor_fn
             #(#trait_fns_with_comment ;)*
         }
     };
@@ -368,7 +381,13 @@ fn render_service(service: &Service) -> TokenStream {
                                 #(let #route_param_vars = #route_param_vars2?;)*
                                 #query_def
                                 #post_body_def
-                                Ok(handler_response_to_hyper_response(handler.#traitfn_ident( #(#arg_list),* ).await))
+                                // Invoke the interceptor
+                                use ::humblegen_rt::service_protocol::ToErrorResponse;
+                                let ctx = handler.intercept_handler_pre(&req).await
+                                    .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                    .map_err(|e| e.to_error_response())?;
+                                // Invoke handler if interceptor doesn't return a ServiceError
+                                Ok(handler_response_to_hyper_response(handler.#traitfn_ident( ctx, #(#arg_list),* ).await))
                             })
                         }
                     ),
@@ -386,7 +405,7 @@ fn render_service(service: &Service) -> TokenStream {
         #[allow(non_snake_case)]
         #[allow(clippy::trivial_regex)]
         #[allow(clippy::single_char_pattern)]
-        fn #routes_factory_name(handler: Arc<dyn #trait_name + Send + Sync>) -> Vec<Route> {
+        fn #routes_factory_name<Context: Default + Sized + Send + Sync + 'static>(handler: Arc<dyn #trait_name<Context=Context> + Send + Sync>) -> Vec<Route> {
             vec![#(#routes),*]
         }
 
