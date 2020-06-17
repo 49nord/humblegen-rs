@@ -97,7 +97,7 @@ pub fn render_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         use ::std::sync::Arc;
         use std::net::SocketAddr;
         #[allow(unused_imports)]
-        use ::humblegen_rt::hyper;
+        use ::humblegen_rt::{hyper, tracing};
 
         /// Builds an HTTP server that exposes services implemented by handler trait objects.
         #[derive(Debug)]
@@ -381,13 +381,27 @@ fn render_service(service: &Service) -> TokenStream {
                                 #(let #route_param_vars = #route_param_vars2?;)*
                                 #query_def
                                 #post_body_def
+
                                 // Invoke the interceptor
                                 use ::humblegen_rt::service_protocol::ToErrorResponse;
-                                let ctx = handler.intercept_handler_pre(&req).await
-                                    .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                    .map_err(|e| e.to_error_response())?;
+                                let ctx = {
+                                    let span = tracing::debug_span!("interceptor");
+                                    let _enter = span.enter();
+                                    handler.intercept_handler_pre(&req).await
+                                        .map_err(::humblegen_rt::service_protocol::ServiceError::from)
+                                        .map_err(|e| {
+                                            tracing::debug!(service_error = ?format!("{:?}", e), "interceptor rejected request");
+                                            e
+                                        })
+                                        .map_err(|e| e.to_error_response())?
+                                };
+
                                 // Invoke handler if interceptor doesn't return a ServiceError
-                                Ok(handler_response_to_hyper_response(handler.#traitfn_ident( ctx, #(#arg_list),* ).await))
+                                {
+                                    let span = tracing::debug_span!("handler");
+                                    let _enter = span.enter();
+                                    Ok(handler_response_to_hyper_response(handler.#traitfn_ident( ctx, #(#arg_list),* ).await))
+                                }
                             })
                         }
                     ),

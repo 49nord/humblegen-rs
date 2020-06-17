@@ -18,5 +18,6 @@ pub extern crate downcast_rs;
 pub extern crate hyper;
 pub extern crate regex;
 pub extern crate tokio;
+pub extern crate tracing;
 
 pub use async_trait_with_sync::async_trait;

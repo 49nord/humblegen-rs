@@ -11,13 +11,13 @@ use ::humblegen_rt::deser_helpers::{
 #[allow(unused_imports)]
 pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceError};
 #[allow(unused_imports)]
-use ::humblegen_rt::hyper;
-#[allow(unused_imports)]
 use ::humblegen_rt::regexset_map::RegexSetMap;
 #[allow(unused_imports)]
 use ::humblegen_rt::server::{self, handler_response_to_hyper_response, Route, Service};
 #[allow(unused_imports)]
 use ::humblegen_rt::service_protocol::ErrorResponse;
+#[allow(unused_imports)]
+use ::humblegen_rt::{hyper, tracing};
 #[allow(unused_imports)]
 use ::std::sync::Arc;
 use std::net::SocketAddr;
@@ -135,14 +135,18 @@ fn routes_BlogApi<Context: Default + Sized + Send + Sync + 'static>(
                         let user = user?;
                         let post_body: Post = deser_post_data(req.body_mut()).await?;
                         use ::humblegen_rt::service_protocol::ToErrorResponse;
-                        let ctx = handler
-                            .intercept_handler_pre(&req)
-                            .await
-                            .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                            .map_err(|e| e.to_error_response())?;
-                        Ok(handler_response_to_hyper_response(
-                            handler.post_user_posts(ctx, post_body, user).await,
-                        ))
+                        let ctx = {
+                            let span = tracing::debug_span!("interceptor");
+                            let _enter = span.enter();
+                            handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                        };
+                        {
+                            let span = tracing::debug_span!("handler");
+                            let _enter = span.enter();
+                            Ok(handler_response_to_hyper_response(
+                                handler.post_user_posts(ctx, post_body, user).await,
+                            ))
+                        }
                     })
                 },
             ),

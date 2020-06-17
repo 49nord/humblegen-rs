@@ -4,6 +4,12 @@ This document describes how humblespec services are mapped to HTTP.
 
 ## URL routes
 
+## Request IDs
+
+A humblegen service assigns request IDs to incoming requests and returns that request ID to the client in the `Request-ID` header.
+The purpose of the request ID is to facilitate the correlation of a response received by the client with log entries emitted by the server.
+Request IDs are randomly-generated 30 alphanumeric case-sensitive characters.
+
 ## Regular Responses + Domain Errors
 
 * Responses are encoded as JSON (see `data_types_json_representation.md`).
