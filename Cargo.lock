@@ -72,6 +72,7 @@ checksum = "e1ba68f4276a778591e36a0c348a269888f3a177c8d2054969389e3b59611ff5"
 [[package]]
 name = "async-trait-with-sync"
 version = "0.1.31"
+source = "git+https://github.com/49nord/async-trait.git?rev=3a4d80f667b78a62f0c57f2524100dafd6b01c31#3a4d80f667b78a62f0c57f2524100dafd6b01c31"
 dependencies = [
  "proc-macro2",
  "quote",

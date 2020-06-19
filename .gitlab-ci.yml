@@ -21,7 +21,6 @@ before_script:
       - $CARGO_HOME
       - target
       - example/target
-      - async-trait-with-sync/target
   script:
     - cd "${CODE_CHECK_DIR}"
     - cargo check ${CODE_CHECK_PROFILE_FLAG} --all --verbose
