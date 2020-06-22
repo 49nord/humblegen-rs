@@ -15,6 +15,8 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use rand::Rng;
+
 /// Serve `services` via HTTP, binding to the given `addr`.
 /// Invokes `handle_request`.
 ///
@@ -46,16 +48,24 @@ pub async fn listen_and_run_forever(
     Ok(())
 }
 
+const REQUEST_ID_HEADER_NAME: &'static str = "Request-ID";
+
 /// The routine that maps an incoming hyper request to a service in `services`,
 /// and invokes the service's dispatcher.
 pub async fn handle_request(
     services: Arc<RegexSetMap<Request<Body>, Service>>,
     req: Request<Body>,
 ) -> Response<Body> {
-    let path = req.uri().path().to_string(); // necessary because we need to move req into dispatcher, but also need to move captures into dispatcher
-    let req = dbg!(req);
+    let request_id: String = rand::thread_rng()
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(30)
+        .collect();
+    let span = tracing::debug_span!("handle_request", request_id = ?request_id);
+    let _enter = span.enter();
 
-    match services.get(&path, &req) {
+    let path = req.uri().path().to_string(); // necessary because we need to move req into dispatcher, but also need to move captures into dispatcher
+
+    let mut response = match services.get(&path, &req) {
         regexset_map::GetResult::None => RuntimeError::NoServiceMounted
             .to_error_response()
             .to_hyper_response(),
@@ -63,6 +73,7 @@ pub async fn handle_request(
             .to_error_response()
             .to_hyper_response(),
         regexset_map::GetResult::One(service) => {
+            tracing::debug!(service_regex = (service.0).0.as_str(), "service matched");
             let tuple = &service.0;
             let service_regex_captures = tuple.0.captures(&path).unwrap();
             let service = service_regex_captures["root"].to_string();
@@ -77,16 +88,31 @@ pub async fn handle_request(
                         .to_hyper_response()
                 }
                 regexset_map::GetResult::One(route) => {
+                    tracing::debug!(route_regex = route.regex.as_str(), "route matched");
                     let captures = route.regex.captures(suffix).unwrap();
                     let dispatcher = &route.dispatcher;
-                    match dispatcher(req, captures).await {
+
+                    let dispatcher_result = {
+                        let dispatcher_span = tracing::debug_span!("invoke_dispatcher");
+                        let _enter = dispatcher_span.enter();
+                        dispatcher(req, captures).await
+                    };
+                    match dispatcher_result {
                         Ok(r) => r,
                         Err(e) => e.to_hyper_response(),
                     }
                 }
             }
         }
-    }
+    };
+
+    response.headers_mut().insert(
+        REQUEST_ID_HEADER_NAME,
+        hyper::header::HeaderValue::from_str(&request_id)
+            .expect("request ID is expected to be valid header value"),
+    );
+
+    response
 }
 
 /// A service is a collection of Routes that share a common `prefix`.

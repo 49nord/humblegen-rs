@@ -76,13 +76,13 @@ use ::humblegen_rt::deser_helpers::{
 #[allow(unused_imports)]
 pub use ::humblegen_rt::handler::{self, HandlerResponse as Response, ServiceError};
 #[allow(unused_imports)]
-use ::humblegen_rt::hyper;
-#[allow(unused_imports)]
 use ::humblegen_rt::regexset_map::RegexSetMap;
 #[allow(unused_imports)]
 use ::humblegen_rt::server::{self, handler_response_to_hyper_response, Route, Service};
 #[allow(unused_imports)]
 use ::humblegen_rt::service_protocol::ErrorResponse;
+#[allow(unused_imports)]
+use ::humblegen_rt::{hyper, tracing};
 #[allow(unused_imports)]
 use ::std::sync::Arc;
 use std::net::SocketAddr;
@@ -265,14 +265,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_foo(ctx).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_foo(ctx).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -291,14 +295,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         Box::pin(async move {
                             let id = id?;
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_id(ctx, id).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_monsters_id(ctx, id).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -319,14 +327,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                                 Some(q) => Some(deser_query_serde_urlencoded(q)?),
                             };
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_monsters(ctx, query).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_monsters(ctx, query).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -347,14 +359,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                                 Some(q) => Some(deser_query_primitive(q)?),
                             };
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_2(ctx, query).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_monsters_2(ctx, query).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -375,14 +391,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                                 Some(q) => Some(deser_query_primitive(q)?),
                             };
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_3(ctx, query).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_monsters_3(ctx, query).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -399,14 +419,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_monsters_4(ctx).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_monsters_4(ctx).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -424,14 +448,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         Box::pin(async move {
                             let post_body: MonsterData = deser_post_data(req.body_mut()).await?;
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.post_monsters(ctx, post_body).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.post_monsters(ctx, post_body).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -451,14 +479,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                             let id = id?;
                             let post_body: Monster = deser_post_data(req.body_mut()).await?;
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.put_monsters_id(ctx, post_body, id).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.put_monsters_id(ctx, post_body, id).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -478,14 +510,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                             let id = id?;
                             let post_body: MonsterPatch = deser_post_data(req.body_mut()).await?;
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.patch_monsters_id(ctx, post_body, id).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.patch_monsters_id(ctx, post_body, id).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -504,14 +540,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         Box::pin(async move {
                             let id = id?;
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.delete_monster_id(ctx, id).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.delete_monster_id(ctx, id).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -528,14 +568,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_version(ctx).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_version(ctx).await,
+                                ))
+                            }
                         })
                     },
                 ),
@@ -552,14 +596,18 @@ fn routes_Godzilla<Context: Default + Sized + Send + Sync + 'static>(
                         let handler = Arc::clone(&handler);
                         Box::pin(async move {
                             use ::humblegen_rt::service_protocol::ToErrorResponse;
-                            let ctx = handler
-                                .intercept_handler_pre(&req)
-                                .await
-                                .map_err(::humblegen_rt::service_protocol::ServiceError::from)
-                                .map_err(|e| e.to_error_response())?;
-                            Ok(handler_response_to_hyper_response(
-                                handler.get_tokio_police_locations(ctx).await,
-                            ))
+                            let ctx = {
+                                let span = tracing::debug_span!("interceptor");
+                                let _enter = span.enter();
+                                handler . intercept_handler_pre ( & req ) . await . map_err ( :: humblegen_rt :: service_protocol :: ServiceError :: from ) . map_err ( | e | { tracing :: debug ! ( service_error = ? format ! ( "{:?}" , e ) , "interceptor rejected request" ) ; e } ) . map_err ( | e | e . to_error_response ( ) ) ?
+                            };
+                            {
+                                let span = tracing::debug_span!("handler");
+                                let _enter = span.enter();
+                                Ok(handler_response_to_hyper_response(
+                                    handler.get_tokio_police_locations(ctx).await,
+                                ))
+                            }
                         })
                     },
                 ),
