@@ -92,6 +92,8 @@ body {
 .endpoint--method--GET { background: #FFCB30; }
 .endpoint--method--POST { background: #F07DBE; }
 .endpoint--method--DELETE { background: #FF6831; }
+.endpoint--method--PATCH { background: #85EB82; }
+.endpoint--method--PUT { background: #FFBEE3; }
 
 .endpoint--route, .userDefinedType--name {
     font-family: 'Roboto Mono', monospace;
