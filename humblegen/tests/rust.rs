@@ -2,6 +2,8 @@ use anyhow::Context;
 
 use std::path::PathBuf;
 
+use humblegen::CodeGenerator;
+
 #[derive(Debug)]
 struct RustTestCase {
     name: String,
@@ -14,8 +16,12 @@ impl RustTestCase {
     fn run(&self) {
         let spec_file = std::fs::File::open(&self.humble_spec).expect("open humble spec file");
         let spec = humblegen::parse(spec_file).expect("parse humble spec file");
-        let spec_rust = humblegen::Language::Rust.render(&spec).to_string();
-        std::fs::write(&self.humble_rust_out, spec_rust).expect("write generated rust code");
+        let codegen =
+            humblegen::backend::rust::Generator::new(humblegen::Artifact::ServerEndpoints)
+                .expect("failed to init humblegen rust backend");
+        codegen
+            .generate(&spec, &self.humble_rust_out)
+            .expect("humblegen rust backend failed");
 
         let t = trybuild::TestCases::new();
         t.pass(&self.main);
