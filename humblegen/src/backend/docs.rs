@@ -82,7 +82,7 @@ impl Context {
         self.body.push_str(&spec_html);
 
         let usertype_html = format!(
-            include_str!("docs/UserDefinedTypeListing.html"),
+            include_str!("docs/user_defined_type_listing.html"),
             userDefinedTypes = self.user_defined_types_to_html(&spec)
         );
 
@@ -95,7 +95,7 @@ impl Context {
         spec.iter()
             .filter_map(|item| match item {
                 ast::SpecItem::StructDef(struct_def) => Some(format!(
-                    include_str!("docs/UserDefinedType.html"),
+                    include_str!("docs/user_defined_type.html"),
                     kind = "structure",
                     name = Escape(&struct_def.name),
                     description = markdown_to_html(
@@ -106,7 +106,7 @@ impl Context {
                     id = Self::link_to_user_defined_type(&struct_def.name)
                 )),
                 ast::SpecItem::EnumDef(enum_def) => Some(format!(
-                    include_str!("docs/UserDefinedType.html"),
+                    include_str!("docs/user_defined_type.html"),
                     kind = "enumeration",
                     name = Escape(&enum_def.name),
                     description = markdown_to_html(
