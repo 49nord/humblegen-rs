@@ -4,19 +4,19 @@
 // as a simple HTML template engine. Since `format!` does not support loops,
 // listings are generated using `...map(|thing| format!(include_str!(...), ...)).join("")`.
 
-use crate::{ast, LibError};
 use crate::backend::elm;
 use crate::backend::rust;
+use crate::{ast, LibError};
 
+use anyhow::Result;
 use comrak::{markdown_to_html, ComrakOptions};
-use anyhow::{Result};
 use itertools::Itertools;
 
-use std::{path::Path, fmt, fs::File};
 use std::io::Write;
+use std::{fmt, fs::File, path::Path};
 
-use base64;
 use ast::Spec;
+use base64;
 
 #[derive(Default)]
 struct Context {
@@ -230,9 +230,8 @@ impl Context {
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
                                 &ComrakOptions::default()
-                            ))
-                        ,
-
+                            )
+                        ),
                         ast::VariantType::Struct(fields) => {
                             let mut rows = vec![format!(
                                 include_str!("docs/typedef_table_enum_field.html"),
@@ -343,29 +342,29 @@ impl Context {
         }
     }
 
-    
     pub fn tuple_def_to_html(tuple: &ast::TupleDef) -> String {
         format!(
-            "({})", tuple
-            .elements()
-            .iter()
-            .map(Self::type_ident_to_html)
-            .join(", ")
+            "({})",
+            tuple
+                .elements()
+                .iter()
+                .map(Self::type_ident_to_html)
+                .join(", ")
         )
     }
 
     pub fn type_ident_to_html(type_ident: &ast::TypeIdent) -> String {
         match type_ident {
             ast::TypeIdent::BuiltIn(atom) => Self::atom_to_html(*atom).to_string(),
-            ast::TypeIdent::List(ty) => format!("List[{}]", Self::type_ident_to_html(&*ty)),
-            ast::TypeIdent::Option(ty) => format!("Option[{}]", Self::type_ident_to_html(&*ty)),
+            ast::TypeIdent::List(ty) => format!("list[{}]", Self::type_ident_to_html(&*ty)),
+            ast::TypeIdent::Option(ty) => format!("option[{}]", Self::type_ident_to_html(&*ty)),
             ast::TypeIdent::Result(ty1, ty2) => format!(
-                "Result[{},{}]",
+                "result[{},{}]",
                 Self::type_ident_to_html(&*ty1),
                 Self::type_ident_to_html(&*ty2)
             ),
             ast::TypeIdent::Map(ty1, ty2) => format!(
-                "Map[{},{}]",
+                "map[{},{}]",
                 Self::type_ident_to_html(&*ty1),
                 Self::type_ident_to_html(&*ty2)
             ),
@@ -476,17 +475,17 @@ fn markdown_get_first_line_as_summary(markdown: &str) -> String {
 }
 
 #[derive(Default)]
-pub struct Generator {
-}
+pub struct Generator {}
 
 impl crate::CodeGenerator for Generator {
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), LibError> {
+    fn generate(&self, spec: &Spec, output: &Path) -> Result<(), LibError> {
         let docs = Context::default().add_spec(spec).to_html();
 
         // TODO: support folder as output path
         let mut outfile = File::create(&output).map_err(LibError::IoError)?;
-        outfile.write_all(docs.as_bytes()).map_err(LibError::IoError)?;
+        outfile
+            .write_all(docs.as_bytes())
+            .map_err(LibError::IoError)?;
         Ok(())
     }
 }
-
