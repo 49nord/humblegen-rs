@@ -369,6 +369,10 @@ pub enum AtomType {
     DateTime,
     /// Date value.
     Date,
+    /// A UUID value
+    Uuid,
+    /// A raw byte array
+    Bytes,
 }
 
 /// A tuple definition.

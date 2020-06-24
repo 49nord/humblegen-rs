@@ -25,6 +25,12 @@ pub struct Customer {
     pub bets: ::std::collections::HashMap<String, f64>,
     #[doc = "The empty type is supported"]
     pub empty: (),
+    #[doc = "The uuid type is supported"]
+    pub unique_id: ::humblegen_rt::uuid::Uuid,
+    #[doc = "The bytes type is supported"]
+    #[serde(deserialize_with = "::humblegen_rt::serialization_helpers::deser_bytes")]
+    #[serde(serialize_with = "::humblegen_rt::serialization_helpers::ser_bytes")]
+    pub profile_pic: Vec<u8>,
 }
 #[derive(Debug, Clone, serde :: Deserialize, serde :: Serialize)]
 #[doc = "A color."]

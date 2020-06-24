@@ -115,7 +115,11 @@ fn generate_type_ident(type_ident: &ast::TypeIdent) -> String {
         ast::TypeIdent::BuiltIn(atom) => generate_atom(atom),
         ast::TypeIdent::List(inner) => format!("List {}", to_atom(generate_type_ident(inner))),
         ast::TypeIdent::Option(inner) => format!("Maybe {}", to_atom(generate_type_ident(inner))),
-        ast::TypeIdent::Result(_okk, _err) => todo!(),
+        ast::TypeIdent::Result(ok, err) => format!(
+            "Result {} {}",
+            to_atom(generate_type_ident(err)),
+            to_atom(generate_type_ident(ok)),
+        ),
         ast::TypeIdent::Map(key, value) => format!(
             "Dict {} {}",
             to_atom(generate_type_ident(key)),
@@ -146,6 +150,8 @@ fn generate_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::Bool => "Bool",
         ast::AtomType::DateTime => "Time.Posix",
         ast::AtomType::Date => "Date.Date",
+        ast::AtomType::Uuid => "String",
+        ast::AtomType::Bytes => "String",
     }
     .to_owned()
 }
@@ -327,6 +333,8 @@ mod decoder_generation {
             ast::AtomType::Bool => "D.bool",
             ast::AtomType::DateTime => "Iso8601.decoder",
             ast::AtomType::Date => "dateDecoder",
+            ast::AtomType::Uuid => todo!(),
+            ast::AtomType::Bytes => todo!(),
         }
         .to_string()
     }
@@ -459,6 +467,8 @@ mod encoder_generation {
             ast::AtomType::Bool => "E.bool",
             ast::AtomType::DateTime => "Iso8601.encode",
             ast::AtomType::Date => "encDate",
+            ast::AtomType::Uuid => todo!(),
+            ast::AtomType::Bytes => todo!(),
         }
         .to_owned()
     }

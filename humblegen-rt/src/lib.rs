@@ -6,7 +6,8 @@
 //! - `SERVER` = within the `server` module
 //! - `HANDLER` = from the handler implementation
 
-pub mod deser_helpers;
+pub mod serialization_helpers;
+pub use serialization_helpers as deser_helpers; // compat
 pub mod handler;
 pub mod regexset_map;
 pub mod server;
@@ -19,5 +20,6 @@ pub extern crate hyper;
 pub extern crate regex;
 pub extern crate tokio;
 pub extern crate tracing;
+pub extern crate uuid;
 
 pub use async_trait_with_sync::async_trait;

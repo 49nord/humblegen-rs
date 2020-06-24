@@ -112,6 +112,11 @@ pub async fn handle_request(
             .expect("request ID is expected to be valid header value"),
     );
 
+    response.headers_mut().insert(
+        hyper::header::CONTENT_TYPE,
+        hyper::header::HeaderValue::from_static("application/json"),
+    );
+
     response
 }
 

@@ -54,7 +54,7 @@ service_rule_def = {
 }
 
 type_ident = { built_in_atom | list_type | option_type | result_type | map_type | tuple_def | camel_case_ident }
-built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" | "datetime" | "date" | "()" }
+built_in_atom = { "str" | "i32" | "u32" | "u8" | "f64" | "bool" | "datetime" | "date" | "()" | "uuid" | "bytes" }
 list_type = { "list" ~ open_bracket ~ type_ident ~ close_bracket }
 option_type = { "option" ~ open_bracket ~ type_ident ~ close_bracket }
 result_type = { "result" ~ open_bracket ~ type_ident ~ close_bracket ~ open_bracket ~ type_ident ~ close_bracket }
