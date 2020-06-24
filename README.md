@@ -21,7 +21,9 @@ $ cargo install --git https://github.com/mbr/humblegen-rs
 Check out `generator/tests/rust/showcase/spec.humble` for an overview of the format. Then just run:
 
 ```
-$ humblegen -l rust myfile.humble
+$ humblegen -l rust -a backend myfile.humble
+$ humblegen -l elm -a client myfile.humble
+$ humblegen -l docs myfile.humble
 ```
 
 Wherever you use the generated code, put the following into `Cargo.toml`:
@@ -44,7 +46,7 @@ humblegen = "*"
 
 (Using `cargo add --build` via [cargo edit](https://crates.io/crates/cargo-edit) is recommended instead)
 
-The, add the following line to `build.rs`:
+Then, add the following line to `build.rs`:
 
 ```rust
 humblegen::build("path/to/spec.humble").expect("compile humble");
