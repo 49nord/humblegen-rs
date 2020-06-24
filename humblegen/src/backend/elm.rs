@@ -1,12 +1,16 @@
 //! Elm code generator.
 
-use anyhow::{Result};
-use crate::{Spec, ast, Artifact, LibError};
+use crate::{ast, Artifact, LibError, Spec};
+use anyhow::{Context, Result};
 use inflector::cases::camelcase::to_camel_case;
 use itertools::Itertools;
-use std::{fs::File, path::Path, io::Write};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
-const BACKEND_NAME : &str = "elm";
+const BACKEND_NAME: &str = "elm";
 
 /// Generate elm code for a docstring.
 ///
@@ -38,7 +42,11 @@ pub(crate) fn generate_struct_def(sdef: &ast::StructDef) -> String {
         "{doc_comment}type alias {name} =\n    {{ {fields}\n    }}",
         doc_comment = generate_doc_comment(&sdef.doc_comment),
         name = sdef.name,
-        fields = sdef.fields.iter().map(generate_struct_field).join("\n    , ")
+        fields = sdef
+            .fields
+            .iter()
+            .map(generate_struct_field)
+            .join("\n    , ")
     )
 }
 
@@ -143,8 +151,8 @@ fn generate_atom(atom: &ast::AtomType) -> String {
 }
 
 mod decoder_generation {
-    use crate::ast;
     use super::{field_name, to_atom, to_camel_case};
+    use crate::ast;
 
     use itertools::Itertools; // directly call join(.) on iterators
 
@@ -183,7 +191,11 @@ mod decoder_generation {
             {dec_name} =\n   D.succeed {name}\n        {field_decoders}",
             dec_name = decoder_name(&sdef.name),
             name = sdef.name,
-            field_decoders = sdef.fields.iter().map(generate_field_decoder).join("\n        ")
+            field_decoders = sdef
+                .fields
+                .iter()
+                .map(generate_field_decoder)
+                .join("\n        ")
         )
     }
 
@@ -232,7 +244,9 @@ mod decoder_generation {
     /// Generate elm code for decoder for an enum variant.
     fn generate_variant_decoder(variant: &ast::VariantDef) -> String {
         match variant.variant_type {
-            ast::VariantType::Simple => unreachable!("cannot build enum decoder for simple variant"),
+            ast::VariantType::Simple => {
+                unreachable!("cannot build enum decoder for simple variant")
+            }
             ast::VariantType::Tuple(ref components) => format!(
                 "D.succeed {name} {components}",
                 name = variant.name,
@@ -255,7 +269,9 @@ mod decoder_generation {
     fn generate_type_decoder(type_ident: &ast::TypeIdent) -> String {
         match type_ident {
             ast::TypeIdent::BuiltIn(atom) => generate_atom_decoder(atom),
-            ast::TypeIdent::List(inner) => format!("D.list {}", to_atom(generate_type_decoder(inner))),
+            ast::TypeIdent::List(inner) => {
+                format!("D.list {}", to_atom(generate_type_decoder(inner)))
+            }
             ast::TypeIdent::Option(inner) => {
                 format!("D.maybe {}", to_atom(generate_type_decoder(inner)))
             }
@@ -288,10 +304,15 @@ mod decoder_generation {
 
     /// Generate elm code for a pipeline that decodes tuple fields by index.
     fn generate_components_by_index_pipeline(tuple: &ast::TupleDef) -> String {
-        tuple.elements().iter().enumerate().map(|(index, element)| {
+        tuple
+            .elements()
+            .iter()
+            .enumerate()
+            .map(|(index, element)| {
                 let decoder = to_atom(generate_type_decoder(&element));
                 format!("|> requiredIdx {} {}", index, decoder)
-        }).join(" ")
+            })
+            .join(" ")
     }
 
     /// Generate elm code for a decoder for an atomic type.
@@ -322,8 +343,8 @@ mod decoder_generation {
 }
 
 mod encoder_generation {
-    use crate::ast;
     use super::{field_name, to_atom, to_camel_case};
+    use crate::ast;
 
     use itertools::Itertools;
 
@@ -406,7 +427,9 @@ mod encoder_generation {
     fn generate_type_encoder(type_ident: &ast::TypeIdent) -> String {
         match type_ident {
             ast::TypeIdent::BuiltIn(atom) => generate_atom_encoder(atom),
-            ast::TypeIdent::List(inner) => format!("E.list {}", to_atom(generate_type_encoder(inner))),
+            ast::TypeIdent::List(inner) => {
+                format!("E.list {}", to_atom(generate_type_encoder(inner)))
+            }
             ast::TypeIdent::Option(inner) => {
                 format!("encMaybe {}", to_atom(generate_type_encoder(inner)))
             }
@@ -487,30 +510,31 @@ fn generate_rest_api_clients(spec: &ast::Spec) -> String {
         .join("")
 }
 
-fn generate_rest_api_client(spec: &ast::ServiceDef) -> String { 
+fn generate_rest_api_client(spec: &ast::ServiceDef) -> String {
     unimplemented!()
 }
 
 pub struct Generator {
-    artifact : Artifact,
+    artifact: Artifact,
 }
 
 impl Generator {
-    pub fn new(artifact :Artifact) -> Result<Self, LibError> {
+    pub fn new(artifact: Artifact) -> Result<Self, LibError> {
         match artifact {
             Artifact::TypesOnly | Artifact::ClientEndpoints => Ok(Self { artifact }),
             Artifact::ServerEndpoints => Err(LibError::UnsupportedArtifact {
-                artifact, backend: BACKEND_NAME
-                
-            })
+                artifact,
+                backend: BACKEND_NAME,
+            }),
         }
     }
 
     pub fn generate_spec(&self, spec: &Spec) -> String {
-        let generate_client_side_services = self.artifact == Artifact::ClientEndpoints && spec
-            .iter()
-            .find(|item| item.service_def().is_some())
-            .is_some();
+        let generate_client_side_services = self.artifact == Artifact::ClientEndpoints
+            && spec
+                .iter()
+                .find(|item| item.service_def().is_some())
+                .is_some();
 
         let defs = generate_def(spec);
 
@@ -530,22 +554,47 @@ impl Generator {
             let decoders = decoder_generation::generate_type_decoders(spec);
             let encoders = encoder_generation::generate_type_encoders(spec);
             let clients = ""; //generate_rest_api_clients(spec);
-            let client_side_code :Vec<&str> = vec![ &decoders, &encoders, &clients ];
+            let client_side_code: Vec<&str> = vec![&decoders, &encoders, &clients];
             outfile.extend(client_side_code);
             outfile.join("\n")
         } else {
             outfile.join("\n")
         }
     }
+
+    pub fn validate_output_dir(path: &Path) -> Result<(), LibError> {
+        if !path.is_dir() {
+            return Err(LibError::OutputMustBeFolder {
+                backend: BACKEND_NAME,
+            });
+        }
+
+        let is_empty = path.read_dir().map_err(LibError::IoError)?.next().is_none();
+
+        if !is_empty {
+            return Err(LibError::OutputFolderNotEmpty {
+                backend: BACKEND_NAME,
+            });
+        }
+
+        Ok(())
+    }
 }
 
 impl crate::CodeGenerator for Generator {
-    fn generate(&self, spec :&Spec, output: &Path) -> Result<(), LibError> {
+    fn generate(&self, spec: &Spec, output: &Path) -> Result<(), LibError> {
         let generated_code = self.generate_spec(spec);
 
+        Self::validate_output_dir(&output)?;
+
+        let mut outdir = PathBuf::from(&output);
+        outdir.push("Api2.elm");
+
         // TODO: support folder as output path
-        let mut outfile = File::create(&output).map_err(LibError::IoError)?;
-        outfile.write_all(generated_code.as_bytes()).map_err(LibError::IoError)?;
+        let mut outfile = File::create(&outdir).map_err(LibError::IoError)?;
+        outfile
+            .write_all(generated_code.as_bytes())
+            .map_err(LibError::IoError)?;
         Ok(())
     }
 }

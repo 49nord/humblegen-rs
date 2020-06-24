@@ -16,6 +16,10 @@ pub enum LibError {
         backend: &'static str,
         artifact: Artifact,
     },
+    #[error("backend '{backend}' requires output to be a folder")]
+    OutputMustBeFolder { backend: &'static str },
+    #[error("backend '{backend}' expects output folder to be empty")]
+    OutputFolderNotEmpty { backend: &'static str },
     #[error(transparent)]
     IoError(#[from] io::Error),
     #[error(transparent)]
