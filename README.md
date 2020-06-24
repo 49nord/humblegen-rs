@@ -21,7 +21,7 @@ $ cargo install --git https://github.com/mbr/humblegen-rs
 Check out `generator/tests/rust/showcase/spec.humble` for an overview of the format. Then just run:
 
 ```
-$ humblegen -l rust -a backend myfile.humble
+$ humblegen -l rust -a server myfile.humble
 $ humblegen -l elm -a client myfile.humble
 $ humblegen -l docs myfile.humble
 ```
