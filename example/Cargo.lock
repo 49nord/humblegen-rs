@@ -484,6 +484,7 @@ name = "humblegen"
 version = "0.3.0"
 dependencies = [
  "Inflector",
+ "anyhow",
  "argh",
  "base64",
  "comrak",
@@ -494,6 +495,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+ "thiserror",
  "which",
 ]
 
@@ -513,6 +515,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-trait-with-sync",
+ "base64",
  "chrono",
  "derivative",
  "downcast-rs",
@@ -528,6 +531,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-futures",
+ "uuid",
 ]
 
 [[package]]
@@ -1018,6 +1022,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dfdd070ccd8ccb78f4ad66bf1982dc37f620ef696c6b5028fe2ed83dd3d0d08"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd80fc12f73063ac132ac92aceea36734f04a1d93c1240c6944e23a3b8841793"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "thread_local"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1218,6 +1242,15 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+]
+
+[[package]]
+name = "uuid"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

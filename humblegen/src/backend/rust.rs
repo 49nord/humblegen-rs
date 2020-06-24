@@ -67,9 +67,13 @@ fn generate_field_def_pair(pair: &ast::FieldDefPair) -> TokenStream {
 /// additional `pub` qualifier.
 fn generate_pub_field_node(field: &ast::FieldNode) -> TokenStream {
     let doc_comment = fmt_opt_string(&field.doc_comment);
+    let attributes = generate_field_attributes(&field.pair.type_ident);
     let field = generate_field_def_pair(&field.pair);
-
-    quote!(#[doc = #doc_comment] pub #field)
+    quote! {
+        #[doc = #doc_comment]
+        #(#[#attributes])*
+        pub #field
+    }
 }
 
 /// Generate rust code for an enum variant.
@@ -133,6 +137,38 @@ fn generate_type_ident(type_ident: &ast::TypeIdent) -> TokenStream {
     }
 }
 
+/// The list of attributes that are tacked onto the struct / enum field definition.
+/// Without the surrounding `#[` and `]`
+type FieldAttributes = Vec<TokenStream>;
+
+/// Render the list of field attributes for the given type_ident
+fn generate_field_attributes(type_ident: &ast::TypeIdent) -> FieldAttributes {
+    match type_ident {
+        ast::TypeIdent::BuiltIn(atom) => match atom {
+            ast::AtomType::Empty => vec![],
+            ast::AtomType::Str => vec![],
+            ast::AtomType::I32 => vec![],
+            ast::AtomType::U32 => vec![],
+            ast::AtomType::U8 => vec![],
+            ast::AtomType::F64 => vec![],
+            ast::AtomType::Bool => vec![],
+            ast::AtomType::DateTime => vec![],
+            ast::AtomType::Date => vec![],
+            ast::AtomType::Uuid => vec![],
+            ast::AtomType::Bytes => vec![
+                quote! { serde(deserialize_with = "::humblegen_rt::serialization_helpers::deser_bytes") },
+                quote! { serde(serialize_with = "::humblegen_rt::serialization_helpers::ser_bytes") },
+            ],
+        },
+        ast::TypeIdent::List(_) => vec![],
+        ast::TypeIdent::Option(_) => vec![],
+        ast::TypeIdent::Result(_, _) => vec![],
+        ast::TypeIdent::Map(_, _) => vec![],
+        ast::TypeIdent::Tuple(_) => vec![],
+        ast::TypeIdent::UserDefined(_) => vec![],
+    }
+}
+
 /// Generate rust code for a tuple definition.
 fn generate_tuple_def(tdef: &ast::TupleDef) -> TokenStream {
     let components: Vec<_> = tdef.elements().iter().map(generate_type_ident).collect();
@@ -160,6 +196,8 @@ fn generate_atom(atom: &ast::AtomType) -> TokenStream {
         // chrono::Date doesn't implement serde::Serialize / serde::Deserialize:
         // https://github.com/chronotope/chrono/issues/182#issuecomment-332382103
         ast::AtomType::Date => quote!(::humblegen_rt::chrono::NaiveDate),
+        ast::AtomType::Uuid => quote! {::humblegen_rt::uuid::Uuid},
+        ast::AtomType::Bytes => quote!(Vec<u8>),
     }
 }
 

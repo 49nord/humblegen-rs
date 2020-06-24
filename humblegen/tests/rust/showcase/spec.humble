@@ -52,6 +52,12 @@ struct Customer {
 
     /// The empty type is supported
     empty: (),
+
+    /// The uuid type is supported
+    unique_id: uuid,
+
+    /// The bytes type is supported
+    profile_pic: bytes,
 }
 
 /// A color.

@@ -317,6 +317,8 @@ fn parse_built_in_atom(pair: pest::iterators::Pair<Rule>) -> AtomType {
         "bool" => AtomType::Bool,
         "datetime" => AtomType::DateTime,
         "date" => AtomType::Date,
+        "uuid" => AtomType::Uuid,
+        "bytes" => AtomType::Bytes,
         _ => unreachable!(dbg!(pair)),
     }
 }

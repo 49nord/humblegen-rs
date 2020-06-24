@@ -146,6 +146,8 @@ fn generate_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::Bool => "Bool",
         ast::AtomType::DateTime => "Time.Posix",
         ast::AtomType::Date => "Date.Date",
+        ast::AtomType::Uuid => todo!(),
+        ast::AtomType::Bytes => todo!(),
     }
     .to_owned()
 }
@@ -327,6 +329,8 @@ mod decoder_generation {
             ast::AtomType::Bool => "D.bool",
             ast::AtomType::DateTime => "Iso8601.decoder",
             ast::AtomType::Date => "dateDecoder",
+            ast::AtomType::Uuid => todo!(),
+            ast::AtomType::Bytes => todo!(),
         }
         .to_string()
     }
@@ -459,6 +463,8 @@ mod encoder_generation {
             ast::AtomType::Bool => "E.bool",
             ast::AtomType::DateTime => "Iso8601.encode",
             ast::AtomType::Date => "encDate",
+            ast::AtomType::Uuid => todo!(),
+            ast::AtomType::Bytes => todo!(),
         }
         .to_owned()
     }

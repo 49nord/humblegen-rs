@@ -339,6 +339,8 @@ impl Context {
             ast::AtomType::Bool => "bool",
             ast::AtomType::DateTime => "datetime",
             ast::AtomType::Date => "date",
+            ast::AtomType::Uuid => "uuid",
+            ast::AtomType::Bytes => "bytes",
         }
     }
 
