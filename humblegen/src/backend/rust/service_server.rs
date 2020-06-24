@@ -100,7 +100,7 @@ pub fn generate_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         use ::humblegen_rt::{hyper, tracing};
 
         /// Builds an HTTP server that exposes services implemented by handler trait objects.
-        #[derive(Debug)]
+        #[derive(Debug, Default)]
         pub struct Builder {
             services: Vec<Service>,
         }
