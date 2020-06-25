@@ -3,9 +3,6 @@
 // Reading this file, you should be aware that we use `format!(include_str!(...), ...)`
 // as a simple HTML template engine. Since `format!` does not support loops,
 // listings are generated using `...map(|thing| format!(include_str!(...), ...)).join("")`.
-
-use crate::backend::elm;
-use crate::backend::rust;
 use crate::{ast, LibError};
 
 use anyhow::Result;
@@ -167,24 +164,6 @@ impl Context {
                 "Language Agnostic",
                 Self::generate_struct_property_table(struct_def),
             ),
-            (
-                "Rust",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "rust",
-                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::generate_struct_def(struct_def)
-                    ))
-                ),
-            ),
-            (
-                "Elm",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "elm",
-                    code = Escape(&elm::generate_struct_def(struct_def))
-                ),
-            ),
         ];
 
         Self::tabbed_navigation_to_html(tabs)
@@ -272,24 +251,6 @@ impl Context {
             (
                 "Language Agnostic",
                 Self::generate_enum_variant_table(enum_def),
-            ),
-            (
-                "Rust",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "rust",
-                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::generate_enum_def(enum_def)
-                    ))
-                ),
-            ),
-            (
-                "Elm",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "elm",
-                    code = Escape(&elm::generate_enum_def(enum_def))
-                ),
             ),
         ];
 
