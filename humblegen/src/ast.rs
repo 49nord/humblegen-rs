@@ -287,7 +287,7 @@ impl ServiceRoute {
 /// - `Literal("monsters")
 /// - `Variable(FieldDefPair{ name: "id", type_ident: TypeIdent::BuiltIn(AtomType::Str) })`
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ServiceRouteComponent {
     Literal(String),
     Variable(FieldDefPair),

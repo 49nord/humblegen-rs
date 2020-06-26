@@ -1,3 +1,10 @@
+import Date -- justinmimbs/date
+import Dict exposing (Dict)
+import Iso8601  -- rtfeldman/elm-iso8601-date-strings
+import Json.Decode as D
+import Time  -- elm/time
+
+
 {-| A helper function for a required field on a JSON object.
 -}
 required : String -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
@@ -27,11 +34,7 @@ unwrapDecoder =
                     D.fail "invalid enum string value"
         )
 
-{-| Encode `Maybe` as `null` or value.
 
--}
-encMaybe : (t -> E.Value) -> Maybe t -> E.Value
-encMaybe enc = Maybe.withDefault E.null << Maybe.map enc
 
 {-| Decode `Date` from ISO string.
 -}
@@ -48,8 +51,3 @@ dateDecoder =
                     D.fail <| "not a valid date: " ++ errMsg
         )
 
-{-| Encode `Date` as ISO string.
--}
-
-encDate : Date.Date -> E.Value
-encDate = Date.toIsoString >> E.string

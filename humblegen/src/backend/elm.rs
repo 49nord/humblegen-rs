@@ -1,20 +1,22 @@
 //! Elm code generator.
 
 use crate::{ast, Artifact, LibError, Spec};
-use anyhow::{Context, Result};
-use std::io::{self, BufWriter};
+use anyhow::Result;
 use inflector::cases::camelcase::to_camel_case;
-use itertools::Itertools;
+use std::io::{self, BufWriter};
 use std::{
-    fs::File,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
 
+const BACKEND_NAME: &str = "elm";
+
+pub mod type_generation;
 pub mod decoder_generation;
 pub mod encoder_generation;
+pub mod endpoint_generation;
 
-const BACKEND_NAME: &str = "elm";
 
 pub(crate) struct IndentWriter {
     indent: usize,
@@ -63,89 +65,21 @@ impl IndentWriter {
     }
 
     fn empty_lines(&mut self, num : usize) -> Result<(), LibError> {
-        write!(self.outstream, "{}", "\n".repeat(num))?;
+        write!(self.outstream, "{}", "\n".repeat(num + 1))?;
         Ok(())
     }
 }
 
-/// Generate elm code for a docstring.
-///
-/// If not present, generates an empty string.
+
 fn generate_doc_comment(doc_comment: &Option<String>) -> String {
+    // TODO: escape comment
     match doc_comment {
-        Some(ref ds) => format!("{{-| {ds}\n-}}\n", ds = ds),
+        Some(ref ds) => format!("{{-| {ds}\n-}}", ds = ds),
         None => "".to_owned(),
     }
 }
 
-// TODO: Elm does not allow documentation on members, so the docs need to be converted to markdown
-//       lists instead. This is true for `type alias` struct fields as well as enum variants.
 
-pub(crate) fn generate_struct_def(def: &ast::StructDef, file :&mut IndentWriter) -> Result<(), LibError> {
-    file.kill_indent();
-
-    write!(file.start_line()?, "{doc_comment}type alias {name} =",
-        doc_comment = generate_doc_comment(&def.doc_comment),
-        name = def.name)?;
-
-    generate_struct_fields(&def.fields, file)?;
-
-    file.empty_lines(2)?;
-
-    Ok(())
-}
-
-pub(crate) fn generate_struct_fields(fields: &ast::StructFields, file :&mut IndentWriter) -> Result<(), LibError> {
-        
-    file.increase_indent();
-
-    for (idx, field) in fields.iter().enumerate() {
-        let first = idx == 0;
-        generate_struct_field(field, first, file)?;
-    }
-    
-    write!(file.start_line()?, "}}")?;
-
-    file.decrease_indent();
-
-    Ok(())
-}
-
-
-fn generate_struct_field(field: &ast::FieldNode, first : bool, file :&mut IndentWriter) -> Result<(), LibError> {
-    write!(file.start_line()?, "{delimiter}{name}: {ty}",
-        delimiter = if first { "{ " } else { ", " }, 
-        name = field_name(&field.pair.name),
-        ty = generate_type_ident(&field.pair.type_ident)
-    )?;
-
-    Ok(())
-}
-
-/// Generate elm code for an enum definition.
-pub(crate) fn generate_enum_def(def: &ast::EnumDef, file :&mut IndentWriter) -> Result<(), LibError> {
-    file.kill_indent();
-
-    write!(file.start_line()?, "{doc_comment}type {name}",
-         doc_comment = generate_doc_comment(&def.doc_comment),
-         name = def.name,)?;
-    
-    file.increase_indent();
-
-    for (idx, field) in def.variants.iter().enumerate() {
-        let first = idx == 0;
-        generate_variant_def(field, first, file)?;
-    }
-
-    file.empty_lines(2)?;
-
-    Ok(())
-}
-
-
-/// Add parenthesis if necessary.
-///
-/// Wraps `s` in parentheses if it contains a space.
 fn to_atom(s: String) -> String {
     if s.contains(' ') {
         format!("({})", s)
@@ -154,121 +88,9 @@ fn to_atom(s: String) -> String {
     }
 }
 
-/// Generate elm code for a variant definition.
-fn generate_variant_def(variant: &ast::VariantDef, first : bool, file :&mut IndentWriter) -> Result<(), LibError> {
-    let delimiter = if first { "= " } else { "| " };
-    match variant.variant_type {
-        ast::VariantType::Simple => {
-            write!(file.start_line()?, "{delimiter}{name}",
-                delimiter = delimiter, 
-                name = variant.name,
-            )?;
-        },
-        ast::VariantType::Tuple(ref fields) => {
-            write!(file.start_line()?, "{delimiter}{name} {fields}",
-                delimiter = delimiter, 
-                name = variant.name,
-                fields = fields
-                .elements()
-                .iter()
-                .map(generate_type_ident)
-                .map(to_atom)
-                .join(" ")
-            )?;
-        }
-        ast::VariantType::Struct(ref fields) => {
-            write!(file.start_line()?, "{delimiter}{name}",
-                delimiter = delimiter, 
-                name = variant.name,
-            )?;
-            generate_struct_fields(fields, file)?;
-        }
-        ast::VariantType::Newtype(ref ty) => {
-            write!(file.start_line()?, "{delimiter}{name} {field}",
-                delimiter = delimiter, 
-                name = variant.name,
-                field = to_atom(generate_type_ident(ty))
-            )?;
-        }
-    }
 
-    Ok(())
-}
-
-/// Generate elm code for a type identifier.
-fn generate_type_ident(type_ident: &ast::TypeIdent) -> String {
-    match type_ident {
-        ast::TypeIdent::BuiltIn(atom) => generate_atom(atom),
-        ast::TypeIdent::List(inner) => format!("List {}", to_atom(generate_type_ident(inner))),
-        ast::TypeIdent::Option(inner) => format!("Maybe {}", to_atom(generate_type_ident(inner))),
-        ast::TypeIdent::Result(ok, err) => format!(
-            "Result {} {}",
-            to_atom(generate_type_ident(err)),
-            to_atom(generate_type_ident(ok)),
-        ),
-        ast::TypeIdent::Map(key, value) => format!(
-            "Dict {} {}",
-            to_atom(generate_type_ident(key)),
-            to_atom(generate_type_ident(value)),
-        ),
-        ast::TypeIdent::Tuple(tdef) => generate_tuple_def(tdef),
-        ast::TypeIdent::UserDefined(ident) => ident.to_owned(),
-    }
-}
-
-/// Generate elm code for a tuple definition.
-fn generate_tuple_def(tdef: &ast::TupleDef) -> String {
-    format!(
-        "({})",
-        tdef.elements().iter().map(generate_type_ident).join(", ")
-    )
-}
-
-/// Generate elm code for an atomic type.
-fn generate_atom(atom: &ast::AtomType) -> String {
-    match atom {
-        ast::AtomType::Empty => "()",
-        ast::AtomType::Str => "String",
-        ast::AtomType::I32 => "Int",
-        ast::AtomType::U32 => "Int",
-        ast::AtomType::U8 => "Int",
-        ast::AtomType::F64 => "Float",
-        ast::AtomType::Bool => "Bool",
-        ast::AtomType::DateTime => "Time.Posix",
-        ast::AtomType::Date => "Date.Date",
-        ast::AtomType::Uuid => "String",
-        ast::AtomType::Bytes => "String",
-    }
-    .to_owned()
-}
-
-/// Construct name for a field.
 fn field_name(ident: &str) -> String {
     to_camel_case(ident)
-}
-
-fn generate_rest_api_client_helpers(spec: &ast::Spec) -> String {
-    spec.iter()
-        .filter_map(|spec_item| match spec_item {
-            ast::SpecItem::StructDef(_) | ast::SpecItem::ServiceDef(_) => None,
-            ast::SpecItem::EnumDef(edef) => Some(decoder_generation::generate_enum_helpers(edef)),
-        })
-        .join("")
-}
-
-fn generate_rest_api_clients(spec: &ast::Spec) -> String {
-    generate_rest_api_client_helpers(spec);
-    spec.iter()
-        .filter_map(|spec_item| match spec_item {
-            // No helpers for structs.
-            ast::SpecItem::StructDef(_) | ast::SpecItem::EnumDef(_) => None,
-            ast::SpecItem::ServiceDef(service) => Some(generate_rest_api_client(service)),
-        })
-        .join("")
-}
-
-fn generate_rest_api_client(spec: &ast::ServiceDef) -> String {
-    todo!()
 }
 
 pub struct Generator {
@@ -292,7 +114,7 @@ impl Generator {
         let mut file = IndentWriter::for_file(outdir, &format!("{}.elm", name))?;
 
         // TODO: make module path prefix configurable
-        write!(file.handle(), "module Api.{} exposing (..)", name)?;
+        write!(file.handle(), "module Api.{} exposing (..)", name.replace("/","."))?;
         file.empty_lines(2)?;
 
         // TODO: write timestamp and info that this file is generated
@@ -301,12 +123,28 @@ impl Generator {
 
     pub fn generate_user_defined_types(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
 
+        {
+            let mut builtin_dir = PathBuf::from(outdir);
+            builtin_dir.push("BuiltIn");
+            fs::create_dir(builtin_dir)?;
+        }
+
+        {
+            let mut file = Self::make_file(spec, outdir, "BuiltIn/Bytes")?;
+            write!(file.handle(), "{}", include_str!("./elm/builtin_type_bytes.elm"))?;
+        }
+
+        {
+            let mut file = Self::make_file(spec, outdir, "BuiltIn/Uuid")?;
+            write!(file.handle(), "{}", include_str!("./elm/builtin_type_uuid.elm"))?;
+        }
+
         let mut file = Self::make_file(spec, outdir, "Data")?;
         
         for spec_item in spec.iter() {
             match spec_item {
-                ast::SpecItem::StructDef(sdef) => generate_struct_def(sdef, &mut file)?,
-                ast::SpecItem::EnumDef(edef) => generate_enum_def(edef, &mut file)?,
+                ast::SpecItem::StructDef(sdef) => type_generation::generate_struct_def(sdef, &mut file)?,
+                ast::SpecItem::EnumDef(edef) => type_generation::generate_enum_def(edef, &mut file)?,
                 ast::SpecItem::ServiceDef(_) => {},
             };
         }
@@ -316,13 +154,43 @@ impl Generator {
 
     pub fn generate_decoders(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
         let mut file = Self::make_file(spec, outdir, "Decode")?;
+        write!(file.handle(), "{}", include_str!("./elm/preamble_decoder.elm"))?;
+        write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+        file.empty_lines(2)?;
         write!(file.handle(), "{}", decoder_generation::generate_type_decoders(spec))?;
         Ok(())
     }
 
     pub fn generate_encoders(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
         let mut file = Self::make_file(spec, outdir, "Encode")?;
+        write!(file.handle(), "{}", include_str!("./elm/preamble_encoder.elm"))?;
+        write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+        file.empty_lines(2)?;
         write!(file.handle(), "{}", encoder_generation::generate_type_encoders(spec))?;
+        Ok(())
+    }
+
+    pub fn generate_endpoints(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
+
+        let mut service_dir = PathBuf::from(outdir);
+        service_dir.push("Service");
+        fs::create_dir(service_dir)?;
+
+        for spec_item in spec.iter() {
+            match spec_item {
+                ast::SpecItem::StructDef(..) | ast::SpecItem::EnumDef(..) => {},
+                ast::SpecItem::ServiceDef(service) => {
+                    let mut file = Self::make_file(spec, outdir, &format!("Service/{}", service.name))?;
+                    write!(file.handle(), "{}", include_str!("./elm/preamble_service.elm"))?;
+                    write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+                    write!(file.start_line()?, "{}", "import Api.Encode as AE")?;
+                    write!(file.start_line()?, "{}", "import Api.Decode as AD")?;
+                    file.empty_lines(2)?;
+                    endpoint_generation::generate(service, &mut file)?;
+                },
+            };
+        }
+
         Ok(())
     }
 
@@ -385,9 +253,7 @@ impl crate::CodeGenerator for Generator {
         Self::generate_user_defined_types(&spec, &output)?;
         Self::generate_decoders(&spec, &output)?;
         Self::generate_encoders(&spec, &output)?;
-        //let generated_code = self.generate_spec(spec);
-
-        //let mut outdir = PathBuf::from(&output);
+        Self::generate_endpoints(&spec, &output)?;
 
         Ok(())
     }
