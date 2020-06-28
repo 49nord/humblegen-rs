@@ -3,14 +3,21 @@ import Dict exposing (Dict)
 import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 import Json.Encode as E
 import Time  -- elm/time
+import Url.Builder
 
-{-| Encode `Date` as ISO string.
--}
-encDate : Date.Date -> E.Value
-encDate = Date.toIsoString >> E.string
 
-{-| Encode `Maybe` as `null` or value.
+builtinEncodeDate : Date.Date -> E.Value
+builtinEncodeDate =
+    Date.toIsoString >> E.string
 
--}
-encMaybe : (t -> E.Value) -> Maybe t -> E.Value
-encMaybe enc = Maybe.withDefault E.null << Maybe.map enc
+
+builtinEncodeMaybe : (t -> E.Value) -> Maybe t -> E.Value
+builtinEncodeMaybe encoder =
+    Maybe.map encoder >> Maybe.withDefault E.null
+
+
+builtinEncodeResult : (err -> E.Value) -> (ok -> E.Value) -> Result err ok -> E.Value
+builtinEncodeResult errEncoder okEncoder res =
+    case res of
+        Err err -> E.object [("Err", errEncoder err)] 
+        Ok ok -> E.object [("Ok", okEncoder ok)]

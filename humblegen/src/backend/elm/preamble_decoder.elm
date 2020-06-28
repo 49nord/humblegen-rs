@@ -4,19 +4,22 @@ import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 import Json.Decode as D
 import Time  -- elm/time
 
+-- TODO: move into its own module to avoid name collision
 
-{-| A helper function for a required field on a JSON object.
--}
+custom : D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
+custom =
+    D.map2 (|>)
+
 required : String -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
-required fieldName itemDecoder functionDecoder =
-  D.map2 (|>) (D.field fieldName itemDecoder) functionDecoder
+required key valDecoder decoder =
+    custom (D.field key valDecoder) decoder
 
 {-| A helper function for a required index in a JSON list.
 -}
 
 requiredIdx : Int -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
-requiredIdx idx itemDecoder functionDecoder =
-    D.map2 (|>) (D.index idx itemDecoder) functionDecoder
+requiredIdx idx itemDecoder decoder =
+    custom (D.index idx itemDecoder) decoder
 
 {-| Maybe-unwrapping decoder.
 
@@ -35,11 +38,8 @@ unwrapDecoder =
         )
 
 
-
-{-| Decode `Date` from ISO string.
--}
-dateDecoder : D.Decoder Date.Date
-dateDecoder =
+builtinDecodeDate : D.Decoder Date.Date
+builtinDecodeDate =
     D.map Date.fromIsoString D.string
     |> D.andThen
         (\result ->
@@ -51,3 +51,13 @@ dateDecoder =
                     D.fail <| "not a valid date: " ++ errMsg
         )
 
+builtinDecodeResult : D.Decoder error -> D.Decoder value -> D.Decoder (Result error value)
+builtinDecodeResult error value =
+    D.oneOf 
+        [ D.field "Ok" value |> D.map Ok
+        , D.field "Err" error |> D.map Err
+        ]
+
+builtinDecodeOption : D.Decoder value -> D.Decoder (Maybe value)
+builtinDecodeOption =
+    D.nullable

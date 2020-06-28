@@ -71,17 +71,18 @@ impl IndentWriter {
 }
 
 
-fn generate_doc_comment(doc_comment: &Option<String>) -> String {
-    // TODO: escape comment
-    match doc_comment {
-        Some(ref ds) => format!("{{-| {ds}\n-}}", ds = ds),
-        None => "".to_owned(),
-    }
+fn generate_doc_comment(_doc_comment: &Option<String>) -> String {
+    // TODO: figure out escaping rules
+    // match doc_comment {
+    //     Some(ref ds) => format!("{{-| {ds}\n-}}", ds = ds),
+    //     None => "".to_owned(),
+    // }
+    "".to_owned()
 }
 
 
 fn to_atom(s: String) -> String {
-    if s.contains(' ') {
+    if s.contains(' ') && !(s.chars().nth(0) == Some('(') && s.chars().last() == Some(')')) {
         format!("({})", s)
     } else {
         s
@@ -140,6 +141,8 @@ impl Generator {
         }
 
         let mut file = Self::make_file(spec, outdir, "Data")?;
+        write!(file.start_line()?, "{}", include_str!("./elm/preamble_types.elm"))?;
+        file.empty_lines(2)?;
         
         for spec_item in spec.iter() {
             match spec_item {
@@ -154,8 +157,8 @@ impl Generator {
 
     pub fn generate_decoders(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
         let mut file = Self::make_file(spec, outdir, "Decode")?;
-        write!(file.handle(), "{}", include_str!("./elm/preamble_decoder.elm"))?;
         write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+        write!(file.start_line()?, "{}", include_str!("./elm/preamble_decoder.elm"))?;
         file.empty_lines(2)?;
         write!(file.handle(), "{}", decoder_generation::generate_type_decoders(spec))?;
         Ok(())
@@ -163,28 +166,40 @@ impl Generator {
 
     pub fn generate_encoders(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
         let mut file = Self::make_file(spec, outdir, "Encode")?;
-        write!(file.handle(), "{}", include_str!("./elm/preamble_encoder.elm"))?;
         write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+        write!(file.start_line()?, "{}", include_str!("./elm/preamble_encoder.elm"))?;
         file.empty_lines(2)?;
-        write!(file.handle(), "{}", encoder_generation::generate_type_encoders(spec))?;
+        write!(file.handle(), "{}", encoder_generation::generate_struct_and_enum_encoders(spec))?;
         Ok(())
     }
 
     pub fn generate_endpoints(spec :&Spec, outdir: &Path) -> Result<(), LibError> {
 
-        let mut service_dir = PathBuf::from(outdir);
-        service_dir.push("Service");
-        fs::create_dir(service_dir)?;
+        {
+            let mut service_dir = PathBuf::from(outdir);
+            service_dir.push("Service");
+            fs::create_dir(service_dir)?;
+        }
+
+        {
+            let mut file = Self::make_file(spec, outdir, "ServiceBuiltIn")?;
+            write!(file.handle(), "{}", include_str!("./elm/builtin_service.elm"))?;
+        }
+
 
         for spec_item in spec.iter() {
             match spec_item {
                 ast::SpecItem::StructDef(..) | ast::SpecItem::EnumDef(..) => {},
                 ast::SpecItem::ServiceDef(service) => {
                     let mut file = Self::make_file(spec, outdir, &format!("Service/{}", service.name))?;
-                    write!(file.handle(), "{}", include_str!("./elm/preamble_service.elm"))?;
-                    write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+                    write!(file.start_line()?, "{}", "import Api.Data as D")?;
                     write!(file.start_line()?, "{}", "import Api.Encode as AE")?;
                     write!(file.start_line()?, "{}", "import Api.Decode as AD")?;
+                    write!(file.start_line()?, "{}", "import Api.ServiceBuiltIn as S")?;
+                    write!(file.start_line()?, "{}", "import Url.Builder")?;
+                    write!(file.start_line()?, "{}", "import Http")?;
+
+                    write!(file.start_line()?, "{}", include_str!("./elm/preamble_service.elm"))?;
                     file.empty_lines(2)?;
                     endpoint_generation::generate(service, &mut file)?;
                 },
@@ -193,39 +208,6 @@ impl Generator {
 
         Ok(())
     }
-
-    // pub fn generate_spec(&self, spec: &Spec) -> String {
-    //     let generate_client_side_services = self.artifact == Artifact::ClientEndpoints
-    //         && spec
-    //             .iter()
-    //             .find(|item| item.service_def().is_some())
-    //             .is_some();
-
-    //     let defs = generate_def(spec);
-
-    //     let mut outfile = vec![
-    //         include_str!("elm/module_header.elm"),
-    //         include_str!("elm/preamble_types.elm"),
-    //         if generate_client_side_services {
-    //             include_str!("elm/preamble_services.elm")
-    //         } else {
-    //             ""
-    //         },
-    //         &defs,
-    //         include_str!("elm/utils_types.elm"),
-    //     ];
-
-    //     if generate_client_side_services {
-    //         let decoders = decoder_generation::generate_type_decoders(spec);
-    //         let encoders = encoder_generation::generate_type_encoders(spec);
-    //         let clients = ""; //generate_rest_api_clients(spec);
-    //         let client_side_code: Vec<&str> = vec![&decoders, &encoders, &clients];
-    //         outfile.extend(client_side_code);
-    //         outfile.join("\n")
-    //     } else {
-    //         outfile.join("\n")
-    //     }
-    // }
 
     pub fn validate_output_dir(path: &Path) -> Result<(), LibError> {
         if !path.is_dir() {
