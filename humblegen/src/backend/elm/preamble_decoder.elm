@@ -51,6 +51,11 @@ builtinDecodeDate =
                     D.fail <| "not a valid date: " ++ errMsg
         )
 
+builtinDecodeIso8601 : D.Decoder Time.Posix
+builtinDecodeIso8601 =
+    Iso8601.decoder
+
+
 builtinDecodeResult : D.Decoder error -> D.Decoder value -> D.Decoder (Result error value)
 builtinDecodeResult error value =
     D.oneOf 

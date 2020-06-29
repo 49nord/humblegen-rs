@@ -33,14 +33,14 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
             let mut line_arguments = Vec::new();
 
             let endpoint_name = synthesize_endpoint_name(&endpoint.route);
-            write!(line_type_signature, "{} : String -> Mabye String -> (Result Http.Error {} -> msg)",
+            write!(line_type_signature, "{} : String -> Maybe String -> (Result Http.Error {} -> msg)",
                 endpoint_name,
-                type_generation::generate_type_ident(endpoint.route.return_type(), "D."))?;
+                to_atom(type_generation::generate_type_ident(endpoint.route.return_type(), "Ty.")))?;
             write!(line_arguments, "{} baseUrl session msg ", endpoint_name)?;
 
             for (idx, component) in endpoint.route.components().iter().enumerate() {
                 if let ast::ServiceRouteComponent::Variable(arg) = component {
-                    write!(line_type_signature, " -> {}", to_atom(type_generation::generate_type_ident(&arg.type_ident, "D.")))?;
+                    write!(line_type_signature, " -> {}", to_atom(type_generation::generate_type_ident(&arg.type_ident, "Ty.")))?;
                     write!(line_arguments, " component{idx}_{name}", idx=idx, name=arg.name)?;
                 }
             }
@@ -66,7 +66,7 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
         write!(file.start_line()?,"Http.request")?;
         file.increase_indent();
         write!(file.start_line()?,"{{ method = \"{}\"", endpoint.route.http_method_as_str())?;
-        write!(file.start_line()?, "{}", ", headers = maybeWithAuthorization session")?;
+        write!(file.start_line()?, "{}", ", headers = S.maybeWithAuthorization session")?;
         write!(file.start_line()?, "{}", ", url = Url.Builder.crossOrigin baseUrl")?;
 
         {
@@ -83,8 +83,10 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
                     }
 
                     ast::ServiceRouteComponent::Variable(arg) => {
-                        write!(file.start_line()?, "{delimiter} AE.{encoder} component{idx}_{name}",
-                            encoder=encoder_generation::query_encoder_name(&arg.name),
+                        write!(file.start_line()?, "{delimiter} component{idx}_{name} |> {encoder} |> E.encode 0",
+                            // TODO: this puts string components into quotes which is most likely not what we want
+                            // Apart from json and query encoders, we need a third encoder: component encoder
+                            encoder=to_atom(encoder_generation::generate_type_json_encoder(&arg.type_ident)),
                             name=arg.name,
                             idx=idx,
                             delimiter=delimiter
@@ -98,7 +100,7 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
             if let Some(ident) = query_ty_name {
                 // Note: cannot collide with other encoders since they are imported with AE prefix
                 // TODO: but can colide with variable names in the route components
-                write!(file.start_line()?, "(AE.{} query)", encoder_generation::query_encoder_name(&ident))?;
+                write!(file.start_line()?, "(AE.{} query)", encoder_generation::query_struct_encoder_name(&ident))?;
             } else {
                 write!(file.start_line()?, "[]")?;
             }
@@ -107,8 +109,8 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
         }
 
         write!(file.start_line()?,", body = Http.emptyBody -- TODO")?;
-        write!(file.start_line()?,", expect = Http.expectJson (S.mapServerResponse >> msg) {}",
-            to_atom(decoder_generation::generate_type_decoder(&endpoint.route.return_type())))?;
+        write!(file.start_line()?,", expect = Http.expectJson (S.mapServerResponse msg) {}",
+            to_atom(decoder_generation::generate_type_decoder(&endpoint.route.return_type(), "AD.")))?;
         write!(file.start_line()?,", timeout = Nothing")?;
         write!(file.start_line()?,", tracker = Nothing")?;
         write!(file.start_line()?,"}}")?;

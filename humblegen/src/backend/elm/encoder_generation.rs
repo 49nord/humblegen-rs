@@ -1,6 +1,7 @@
-use super::{field_name, to_atom, to_camel_case};
+use super::{field_name, to_atom};
 use crate::ast;
 
+use inflector::Inflector;
 use itertools::Itertools;
 
 /// Generate elm code for encoder functions for `spec`.
@@ -30,7 +31,7 @@ fn generate_struct_json_encoder(sdef: &ast::StructDef) -> String {
 fn generate_struct_query_encoder(sdef: &ast::StructDef) -> String {
     format!(
         "{encoder_name} : {type_name} -> List Url.Builder.QueryParameter\n{encoder_name} obj =\n    [ {fields}\n    ]",
-        encoder_name = query_encoder_name(&sdef.name),
+        encoder_name = query_struct_encoder_name(&sdef.name),
         type_name = sdef.name,
         fields = sdef.fields.iter().map(generate_field_query_encoder).join("\n    , "),
     )
@@ -149,7 +150,7 @@ fn generate_type_encoder(atom_encoder: &dyn Fn(&ast::AtomType) -> String, type_i
     }
 }
 
-fn generate_type_json_encoder(type_ident: &ast::TypeIdent) -> String {
+pub(crate) fn generate_type_json_encoder(type_ident: &ast::TypeIdent) -> String {
     generate_type_encoder(&generate_atom_json_encoder, type_ident)
 }
 
@@ -206,10 +207,9 @@ fn generate_tuple_encoder(tdef: &ast::TupleDef) -> String {
 
 /// Construct name of encoder function for specific `ident`.
 pub(crate) fn struct_or_enum_encoder_name(ident: &str) -> String {
-    to_camel_case(&format!("encode{}", ident))
+    format!("encode{}", ident.to_pascal_case())
 }
 
-/// Encoder for url query
-pub(crate) fn query_encoder_name(ident: &str) -> String {
-    to_camel_case(&format!("buildQuery{}", ident))
+pub(crate) fn query_struct_encoder_name(ident: &str) -> String {
+    format!("buildQuery{}", ident.to_pascal_case())
 }

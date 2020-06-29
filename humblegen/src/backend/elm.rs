@@ -192,7 +192,9 @@ impl Generator {
                 ast::SpecItem::StructDef(..) | ast::SpecItem::EnumDef(..) => {},
                 ast::SpecItem::ServiceDef(service) => {
                     let mut file = Self::make_file(spec, outdir, &format!("Service/{}", service.name))?;
-                    write!(file.start_line()?, "{}", "import Api.Data as D")?;
+                    write!(file.start_line()?, "{}", "import Api.Data as Ty")?;
+                    write!(file.start_line()?, "{}", "import Json.Decode as D")?;
+                    write!(file.start_line()?, "{}", "import Json.Encode as E")?;
                     write!(file.start_line()?, "{}", "import Api.Encode as AE")?;
                     write!(file.start_line()?, "{}", "import Api.Decode as AD")?;
                     write!(file.start_line()?, "{}", "import Api.ServiceBuiltIn as S")?;
