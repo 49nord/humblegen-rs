@@ -1,7 +1,7 @@
 //! Elm code generator.
 
 use crate::{ast, Artifact, LibError, Spec};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use inflector::cases::camelcase::to_camel_case;
 use itertools::Itertools;
 use std::{
@@ -157,7 +157,7 @@ fn generate_atom(atom: &ast::AtomType) -> String {
 }
 
 mod decoder_generation {
-    use super::{to_atom, to_camel_case};
+    use super::{field_name, to_atom, to_camel_case};
     use crate::ast;
 
     use itertools::Itertools; // directly call join(.) on iterators
@@ -541,14 +541,16 @@ impl Generator {
 
     pub fn generate_spec(&self, spec: &Spec) -> String {
         let generate_client_side_services = self.artifact == Artifact::ClientEndpoints
-            && spec.iter().any(|item| item.service_def().is_some());
+            && spec
+                .iter()
+                .find(|item| item.service_def().is_some())
+                .is_some();
 
         let defs = generate_def(spec);
 
         let mut outfile = vec![
             include_str!("elm/module_header.elm"),
             include_str!("elm/preamble_types.elm"),
-            #[allow(clippy::if_same_then_else)]
             if generate_client_side_services {
                 include_str!("elm/preamble_services.elm")
             } else {

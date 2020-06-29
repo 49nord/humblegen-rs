@@ -16,6 +16,7 @@ use std::io::Write;
 use std::{fmt, fs::File, path::Path};
 
 use ast::Spec;
+use base64;
 
 #[derive(Default)]
 struct Context {
@@ -419,7 +420,7 @@ impl Context {
         format!("{}{}", route.http_method_as_str(), component_str)
     }
 
-    fn to_html(&self) -> String {
+    fn to_html(&mut self) -> String {
         vec![
             "<!doctype html>",
             r#"<meta charset="utf-8">"#,

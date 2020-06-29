@@ -80,7 +80,7 @@ where
 }
 
 /// Helper function used by generate code to serialize a humblegen `bytes` field.
-pub fn ser_bytes<S>(v: &[u8], serializer: S) -> Result<S::Ok, S::Error>
+pub fn ser_bytes<S>(v: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
