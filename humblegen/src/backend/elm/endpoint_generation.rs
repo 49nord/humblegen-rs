@@ -18,25 +18,16 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
         // executeRequest function.
         write!(file.start_line()?, "{}", generate_doc_comment(&endpoint.doc_comment))?;
 
-        // TODO: should narrow type of query parameter. According to spec query has to be a user defined struct
-        let query_ty_name = endpoint.route.query().as_ref().map(|query| {
-            if let ast::TypeIdent::UserDefined(query_ty_name) = query {
-                query_ty_name
-            } else {
-                panic!("query MUST be a user defined struct");
-            }
-        });
-
         {
             // built_signature
             let mut line_type_signature = Vec::new();
             let mut line_arguments = Vec::new();
 
             let endpoint_name = synthesize_endpoint_name(&endpoint.route);
-            write!(line_type_signature, "{} : String -> Maybe String -> (Result Http.Error {} -> msg)",
+            write!(line_type_signature, "{} : String -> String -> Maybe String -> (Result S.Error (S.Success {})-> msg)",
                 endpoint_name,
                 to_atom(type_generation::generate_type_ident(endpoint.route.return_type(), "Ty.")))?;
-            write!(line_arguments, "{} baseUrl session msg ", endpoint_name)?;
+            write!(line_arguments, "{} baseUrl clientVersion session msg", endpoint_name)?;
 
             for (idx, component) in endpoint.route.components().iter().enumerate() {
                 if let ast::ServiceRouteComponent::Variable(arg) = component {
@@ -45,11 +36,14 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
                 }
             }
 
-            // TODO: body
+            if let Some(body) = endpoint.route.request_body() {
+                write!(line_type_signature, " -> {}", to_atom(type_generation::generate_type_ident(&body, "Ty.")))?;
+                write!(line_arguments, " body")?;
+            }
             
-            if let Some(ident) = query_ty_name {
+            if let Some(ident) = endpoint.route.query() {
                 
-                write!(line_type_signature, " -> {}", ident)?;
+                write!(line_type_signature, " -> {}", type_generation::generate_type_ident(ident, "Ty."))?;
                 write!(line_arguments, " query")?;
             }
 
@@ -86,7 +80,7 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
                         write!(file.start_line()?, "{delimiter} component{idx}_{name} |> {encoder} |> E.encode 0",
                             // TODO: this puts string components into quotes which is most likely not what we want
                             // Apart from json and query encoders, we need a third encoder: component encoder
-                            encoder=to_atom(encoder_generation::generate_type_json_encoder(&arg.type_ident)),
+                            encoder=to_atom(encoder_generation::generate_type_json_encoder(&arg.type_ident, "AE.")),
                             name=arg.name,
                             idx=idx,
                             delimiter=delimiter
@@ -97,10 +91,8 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
 
             write!(file.start_line()?, "]")?;
             
-            if let Some(ident) = query_ty_name {
-                // Note: cannot collide with other encoders since they are imported with AE prefix
-                // TODO: but can colide with variable names in the route components
-                write!(file.start_line()?, "(AE.{} query)", encoder_generation::query_struct_encoder_name(&ident))?;
+            if let Some(ident) = endpoint.route.query() {
+                write!(file.start_line()?, "({} query)", to_atom(encoder_generation::query_encoder(ident, "AE.")))?;
             } else {
                 write!(file.start_line()?, "[]")?;
             }
@@ -108,31 +100,18 @@ pub(crate) fn generate(service: &ast::ServiceDef, file :&mut IndentWriter) -> Re
             file.decrease_indent();
         }
 
-        write!(file.start_line()?,", body = Http.emptyBody -- TODO")?;
-        write!(file.start_line()?,", expect = Http.expectJson (S.mapServerResponse msg) {}",
+        if let Some(body) = endpoint.route.request_body() {
+            write!(file.start_line()?,", body = Http.jsonBody <| {} body", to_atom(encoder_generation::generate_type_json_encoder(body, "AE.")))?;
+        } else {
+            write!(file.start_line()?,", body = Http.emptyBody")?;
+        }
+
+        write!(file.start_line()?,", expect = S.expectRestfulJson msg clientVersion {}",
             to_atom(decoder_generation::generate_type_decoder(&endpoint.route.return_type(), "AD.")))?;
         write!(file.start_line()?,", timeout = Nothing")?;
         write!(file.start_line()?,", tracker = Nothing")?;
         write!(file.start_line()?,"}}")?;
         file.kill_indent();
-
-        // match &endpoint.route {
-        //     ast::ServiceRoute::Get { components, query, ret } => {
-
-        //     }
-        //     ast::ServiceRoute::Post { components, query, body, ret } => {
-                
-        //     }
-        //     ast::ServiceRoute::Delete { components, query, ret } => {
-                
-        //     }
-        //     ast::ServiceRoute::Put  { components, query, body, ret } => {
-                
-        //     }
-        //     ast::ServiceRoute::Patch { components, query, body, ret }  => {
-                
-        //     }       
-        // }
     }
 
     file.empty_lines(2)?;

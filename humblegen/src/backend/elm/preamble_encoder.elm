@@ -10,6 +10,10 @@ builtinEncodeDate : Date.Date -> E.Value
 builtinEncodeDate =
     Date.toIsoString >> E.string
 
+builtinEncodeIso8601 : Time.Posix -> E.Value
+builtinEncodeIso8601 =
+    Iso8601.encode
+
 
 builtinEncodeMaybe : (t -> E.Value) -> Maybe t -> E.Value
 builtinEncodeMaybe encoder =
