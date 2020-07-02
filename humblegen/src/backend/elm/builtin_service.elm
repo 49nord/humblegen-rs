@@ -3,7 +3,7 @@ import Json.Decode as D
 import Dict
 
 type BugKind =
-       InvalidResponseBody D.Error -- Failed to decode json. most likely a bug in humblegen
+       InvalidResponseBody Http.Metadata D.Error -- Failed to decode json. most likely a bug in humblegen
      | InvalidRequestUrl -- probably a bug in the elm url core package
 
 type alias VersionPairing =
@@ -66,8 +66,10 @@ expectRestfulJson toMsg clientVersion decoder =
             -- we already know the code, and kind is just server internal stack-trace-like garbage neither
             -- frontend code nor end-user care about, discard...
             let
-              versions = VersionPairing (serverVersion metadata) clientVersion
-            in if not (eqVersions versions) then
+              maybeServerVersion = (serverVersion metadata)
+
+              versions = VersionPairing maybeServerVersion clientVersion
+            in if not (eqVersions versions) && maybeServerVersion /= Nothing then
               Err <| ServerClientVersionMismatch metadata versions
             else if metadata.statusCode == 401 then
               Err <| MissingOrInvalidAuth metadata
@@ -87,7 +89,7 @@ expectRestfulJson toMsg clientVersion decoder =
               in if not (eqVersions versions) then
                 Err <| ServerClientVersionMismatch metadata versions
               else
-                Err <| Bug <| InvalidResponseBody err
+                Err <| Bug <| InvalidResponseBody metadata err
 
 
 -- TODO: this code is obviously not portable to other projects, add auth annotations to humblegen
