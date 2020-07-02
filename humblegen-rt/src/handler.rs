@@ -13,5 +13,5 @@ pub type HandlerResponse<T> = Result<T, ServiceError>;
 pub enum ServiceError {
     Authentication,
     Authorization,
-    Internal(Box<dyn std::error::Error>),
+    Internal(Box<dyn std::error::Error + Send + Sync>),
 }
