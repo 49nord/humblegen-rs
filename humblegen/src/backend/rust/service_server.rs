@@ -378,10 +378,6 @@ fn generate_service(service: &Service) -> TokenStream {
                             // Inside the closure, `?` the results and return the param deserialization error.
                             #(#route_param_parse_stmts);*
                             Box::pin(async move {
-                                #(let #route_param_vars = #route_param_vars2?;)*
-                                #query_def
-                                #post_body_def
-
                                 // Invoke the interceptor
                                 use ::humblegen_rt::service_protocol::ToErrorResponse;
                                 let ctx = {
@@ -395,6 +391,14 @@ fn generate_service(service: &Service) -> TokenStream {
                                         })
                                         .map_err(|e| e.to_error_response())?
                                 };
+
+                                // deserialize only after we have invoked the interceptor
+                                // => interceptor can implement some DoS protection
+                                #(let #route_param_vars = #route_param_vars2?;)*
+                                #query_def
+                                #post_body_def
+
+                                drop(req); // free some memory
 
                                 // Invoke handler if interceptor doesn't return a ServiceError
                                 {
