@@ -126,6 +126,8 @@ pub async fn handle_request(
         hyper::header::HeaderValue::from_static("application/json"),
     );
 
+    tracing::debug!(http_status = ?response.status(), "finished request");
+
     response
 }
 
