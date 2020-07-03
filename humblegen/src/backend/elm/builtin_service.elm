@@ -5,6 +5,8 @@ import Dict
 type BugKind =
        InvalidResponseBody Http.Metadata D.Error -- Failed to decode json. most likely a bug in humblegen
      | InvalidRequestUrl -- probably a bug in the elm url core package
+     | LogicError -- bug in humblegen server implementation, made possible by lose typing in the humblespec, e.g. if a single error object is
+                  -- used for all responses and the error returned does not make sense for the request
 
 type alias VersionPairing =
   { server: Maybe String
