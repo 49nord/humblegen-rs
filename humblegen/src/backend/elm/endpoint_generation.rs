@@ -1,3 +1,6 @@
+// TODO: Fix lints and remove this.
+#![allow(clippy::write_literal)]
+
 use super::{
     decoder_generation, encoder_generation, generate_doc_comment, to_atom, type_generation,
     IndentWriter,

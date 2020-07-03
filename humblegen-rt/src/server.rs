@@ -48,8 +48,8 @@ pub async fn listen_and_run_forever(
     Ok(())
 }
 
-const REQUEST_ID_HEADER_NAME: &'static str = "Request-ID";
-const SERVER_VERSION_HEADER_NAME: &'static str = "Backend-Version";
+const REQUEST_ID_HEADER_NAME: &str = "Request-ID";
+const SERVER_VERSION_HEADER_NAME: &str = "Backend-Version";
 
 pub const GIT_VERSION: &str = git_version::git_version!();
 

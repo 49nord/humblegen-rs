@@ -1,5 +1,9 @@
 //! Elm code generator.
 
+// TODO: Fix lints and remove this.
+#![allow(clippy::write_literal)]
+
+
 use crate::{ast, Artifact, LibError, Spec};
 use anyhow::Result;
 use inflector::cases::camelcase::to_camel_case;
@@ -86,7 +90,7 @@ fn generate_doc_comment(_doc_comment: &Option<String>) -> String {
 }
 
 fn to_atom(s: String) -> String {
-    if s.contains(' ') && !(s.chars().nth(0) == Some('(') && s.chars().last() == Some(')')) {
+    if s.contains(' ') && !(s.starts_with('(') && s.ends_with(')')) {
         format!("({})", s)
     } else {
         s
