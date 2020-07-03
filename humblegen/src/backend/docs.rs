@@ -3,9 +3,6 @@
 // Reading this file, you should be aware that we use `format!(include_str!(...), ...)`
 // as a simple HTML template engine. Since `format!` does not support loops,
 // listings are generated using `...map(|thing| format!(include_str!(...), ...)).join("")`.
-
-use crate::backend::elm;
-use crate::backend::rust;
 use crate::{ast, LibError};
 
 use anyhow::Result;
@@ -161,30 +158,10 @@ impl Context {
 
     fn struct_definition_to_html(struct_def: &ast::StructDef) -> String {
         // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
-        let tabs = vec![
-            (
-                "Language Agnostic",
-                Self::generate_struct_property_table(struct_def),
-            ),
-            (
-                "Rust",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "rust",
-                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::generate_struct_def(struct_def)
-                    ))
-                ),
-            ),
-            (
-                "Elm",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "elm",
-                    code = Escape(&elm::generate_struct_def(struct_def))
-                ),
-            ),
-        ];
+        let tabs = vec![(
+            "Language Agnostic",
+            Self::generate_struct_property_table(struct_def),
+        )];
 
         Self::tabbed_navigation_to_html(tabs)
     }
@@ -267,30 +244,10 @@ impl Context {
 
     fn enum_definition_to_html(enum_def: &ast::EnumDef) -> String {
         // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
-        let tabs = vec![
-            (
-                "Language Agnostic",
-                Self::generate_enum_variant_table(enum_def),
-            ),
-            (
-                "Rust",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "rust",
-                    code = Escape(&rust::rustfmt::try_rustfmt_2018_token_stream(
-                        &rust::generate_enum_def(enum_def)
-                    ))
-                ),
-            ),
-            (
-                "Elm",
-                format!(
-                    include_str!("docs/typedef_for_language.html"),
-                    langId = "elm",
-                    code = Escape(&elm::generate_enum_def(enum_def))
-                ),
-            ),
-        ];
+        let tabs = vec![(
+            "Language Agnostic",
+            Self::generate_enum_variant_table(enum_def),
+        )];
 
         Self::tabbed_navigation_to_html(tabs)
     }
@@ -419,7 +376,9 @@ impl Context {
         format!("{}{}", route.http_method_as_str(), component_str)
     }
 
-    fn to_html(&self) -> String {
+    // FIXME: Consider renaming this
+    #[allow(clippy::wrong_self_convention)]
+    fn to_html(&mut self) -> String {
         vec![
             "<!doctype html>",
             r#"<meta charset="utf-8">"#,

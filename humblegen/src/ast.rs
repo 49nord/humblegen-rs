@@ -267,6 +267,16 @@ impl ServiceRoute {
         }
     }
 
+    pub fn request_body(&self) -> Option<&TypeIdent> {
+        match self {
+            ServiceRoute::Get { .. } => None,
+            ServiceRoute::Delete { .. } => None,
+            ServiceRoute::Post { body, .. } => Some(body),
+            ServiceRoute::Put { body, .. } => Some(body),
+            ServiceRoute::Patch { body, .. } => Some(body),
+        }
+    }
+
     pub fn http_method_as_str(&self) -> &'static str {
         match self {
             ServiceRoute::Get { .. } => "GET",
@@ -287,7 +297,7 @@ impl ServiceRoute {
 /// - `Literal("monsters")
 /// - `Variable(FieldDefPair{ name: "id", type_ident: TypeIdent::BuiltIn(AtomType::Str) })`
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ServiceRouteComponent {
     Literal(String),
     Variable(FieldDefPair),
