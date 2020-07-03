@@ -1,6 +1,6 @@
 use super::{to_atom, type_generation};
-use inflector::Inflector;
 use crate::ast;
+use inflector::Inflector;
 
 use itertools::Itertools; // directly call join(.) on iterators
 
@@ -14,7 +14,6 @@ pub fn generate_type_decoders(spec: &ast::Spec) -> String {
         })
         .join("\n\n\n")
 }
-
 
 fn generate_struct_decoder(sdef: &ast::StructDef) -> String {
     let ns = "";
@@ -30,7 +29,6 @@ fn generate_struct_decoder(sdef: &ast::StructDef) -> String {
             .join("\n        ")
     )
 }
-
 
 fn generate_enum_decoder(edef: &ast::EnumDef) -> String {
     let ns = "";
@@ -70,7 +68,7 @@ fn generate_enum_decoder(edef: &ast::EnumDef) -> String {
     )
 }
 
-fn generate_field_decoder(field: &ast::FieldNode, ns :&str) -> String {
+fn generate_field_decoder(field: &ast::FieldNode, ns: &str) -> String {
     format!(
         "|> required \"{name}\" {decoder}",
         name = field.pair.name,
@@ -78,16 +76,20 @@ fn generate_field_decoder(field: &ast::FieldNode, ns :&str) -> String {
     )
 }
 
-pub(crate) fn generate_type_decoder(type_ident: &ast::TypeIdent, ns :&str) -> String {
+pub(crate) fn generate_type_decoder(type_ident: &ast::TypeIdent, ns: &str) -> String {
     match type_ident {
         ast::TypeIdent::BuiltIn(atom) => generate_atom_decoder(atom, ns),
         ast::TypeIdent::List(inner) => {
             format!("D.list {}", to_atom(generate_type_decoder(inner, ns)))
         }
-        ast::TypeIdent::Option(inner) => {
-            format!("{}builtinDecodeOption {}", ns, to_atom(generate_type_decoder(inner, ns)))
-        }
-        ast::TypeIdent::Result(ok, err) => format!("{}builtinDecodeResult {} {}", ns,
+        ast::TypeIdent::Option(inner) => format!(
+            "{}builtinDecodeOption {}",
+            ns,
+            to_atom(generate_type_decoder(inner, ns))
+        ),
+        ast::TypeIdent::Result(ok, err) => format!(
+            "{}builtinDecodeResult {} {}",
+            ns,
             to_atom(generate_type_decoder(err, ns)),
             to_atom(generate_type_decoder(ok, ns))
         ),
@@ -105,8 +107,7 @@ pub(crate) fn generate_type_decoder(type_ident: &ast::TypeIdent, ns :&str) -> St
     }
 }
 
-
-fn generate_tuple_decoder(tdef: &ast::TupleDef, ns :&str) -> String {
+fn generate_tuple_decoder(tdef: &ast::TupleDef, ns: &str) -> String {
     let len = tdef.elements().len();
     let parts: Vec<String> = (0..len).map(|i| format!("x{}", i)).collect();
 
@@ -118,8 +119,7 @@ fn generate_tuple_decoder(tdef: &ast::TupleDef, ns :&str) -> String {
     )
 }
 
-
-fn generate_components_by_index_pipeline(tuple: &ast::TupleDef, ns :&str) -> String {
+fn generate_components_by_index_pipeline(tuple: &ast::TupleDef, ns: &str) -> String {
     tuple
         .elements()
         .iter()
@@ -131,8 +131,7 @@ fn generate_components_by_index_pipeline(tuple: &ast::TupleDef, ns :&str) -> Str
         .join(" ")
 }
 
-
-fn generate_atom_decoder(atom: &ast::AtomType, ns :&str) -> String {
+fn generate_atom_decoder(atom: &ast::AtomType, ns: &str) -> String {
     match atom {
         ast::AtomType::Empty => "D.null ()".to_string(),
         ast::AtomType::Str => "D.string".to_string(),
@@ -149,6 +148,6 @@ fn generate_atom_decoder(atom: &ast::AtomType, ns :&str) -> String {
 }
 
 /// Construct decoder function name.
-pub(crate) fn decoder_name(ident: &str, ns :&str) -> String {
+pub(crate) fn decoder_name(ident: &str, ns: &str) -> String {
     format!("{}decode{}", ns, ident.to_pascal_case())
 }

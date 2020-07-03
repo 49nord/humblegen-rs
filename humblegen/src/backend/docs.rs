@@ -159,12 +159,10 @@ impl Context {
 
     fn struct_definition_to_html(struct_def: &ast::StructDef) -> String {
         // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
-        let tabs = vec![
-            (
-                "Language Agnostic",
-                Self::generate_struct_property_table(struct_def),
-            ),
-        ];
+        let tabs = vec![(
+            "Language Agnostic",
+            Self::generate_struct_property_table(struct_def),
+        )];
 
         Self::tabbed_navigation_to_html(tabs)
     }
@@ -247,12 +245,10 @@ impl Context {
 
     fn enum_definition_to_html(enum_def: &ast::EnumDef) -> String {
         // TODO: make a common interface/trait for all languages?! why does this not exist in the first place
-        let tabs = vec![
-            (
-                "Language Agnostic",
-                Self::generate_enum_variant_table(enum_def),
-            ),
-        ];
+        let tabs = vec![(
+            "Language Agnostic",
+            Self::generate_enum_variant_table(enum_def),
+        )];
 
         Self::tabbed_navigation_to_html(tabs)
     }
