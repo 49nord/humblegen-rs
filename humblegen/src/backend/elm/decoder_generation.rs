@@ -47,14 +47,15 @@ fn generate_enum_decoder(edef: &ast::EnumDef) -> String {
                 components = generate_components_by_index_pipeline(components, ns)
             ),
             ast::VariantType::Struct(ref fields) => format!(
-                "D.succeed {name} {field_decoders} |> D.map {variantName}",
+                "D.field \"{variantName}\" (D.succeed {name} {field_decoders} |> D.map {variantName})",
                 name = type_generation::enum_anonymous_struct_constructor_name(&edef.name, &variant.name),
                 variantName = variant.name,
                 field_decoders = fields.iter().map(|f| generate_field_decoder(f, ns)).join(" "),
             ),
             ast::VariantType::Newtype(ref ty) => format!(
-                "D.map {name} {ty}",
+                "D.field \"{variantName}\" (D.map {name} {ty})",
                 name = variant.name,
+                variantName = variant.name,
                 ty = to_atom(generate_type_decoder(ty, ns)),
             ),
         }
