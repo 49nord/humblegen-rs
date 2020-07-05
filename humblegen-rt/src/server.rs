@@ -48,10 +48,7 @@ pub async fn listen_and_run_forever(
     Ok(())
 }
 
-const REQUEST_ID_HEADER_NAME: &str = "Request-ID";
-const SERVER_VERSION_HEADER_NAME: &str = "Backend-Version";
-
-pub const GIT_VERSION: &str = git_version::git_version!();
+const REQUEST_ID_HEADER_NAME: &'static str = "Request-ID";
 
 /// The routine that maps an incoming hyper request to a service in `services`,
 /// and invokes the service's dispatcher.
@@ -113,12 +110,6 @@ pub async fn handle_request(
         REQUEST_ID_HEADER_NAME,
         hyper::header::HeaderValue::from_str(&request_id)
             .expect("request ID is expected to be valid header value"),
-    );
-
-    response.headers_mut().insert(
-        SERVER_VERSION_HEADER_NAME,
-        hyper::header::HeaderValue::from_str(GIT_VERSION)
-            .expect("git version is expected to be valid header value"),
     );
 
     response.headers_mut().insert(

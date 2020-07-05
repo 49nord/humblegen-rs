@@ -30,4 +30,3 @@ tokio = { version = "0.2.20", features = ["rt-threaded", "tcp", "macros"] }
 tracing = "0.1.15"
 tracing-futures = "0.2.4"
 uuid = { version = "0.8", features = ["serde"] }
-git-version = "0.3.4"
