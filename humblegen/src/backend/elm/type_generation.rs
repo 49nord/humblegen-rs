@@ -221,8 +221,8 @@ fn generate_atom(atom: &ast::AtomType) -> String {
         ast::AtomType::Bool => "Bool",
         ast::AtomType::DateTime => "Time.Posix",
         ast::AtomType::Date => "Date.Date",
-        ast::AtomType::Uuid => "String",
-        ast::AtomType::Bytes => "String",
+        ast::AtomType::Uuid => "BuiltinUuid.Uuid",
+        ast::AtomType::Bytes => "BuiltinBytes.Bytes",
     }
     .to_owned()
 }

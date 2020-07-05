@@ -3,6 +3,8 @@ import Dict exposing (Dict)
 import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 import Json.Decode as D
 import Time  -- elm/time
+import Api.BuiltIn.Bytes as BuiltinBytes
+import Api.BuiltIn.Uuid as BuiltinUuid
 
 -- TODO: move into its own module to avoid name collision
 

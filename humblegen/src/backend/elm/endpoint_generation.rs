@@ -135,13 +135,12 @@ pub(crate) fn generate(service: &ast::ServiceDef, file: &mut IndentWriter) -> Re
                     ast::ServiceRouteComponent::Variable(arg) => {
                         write!(
                             file.start_line()?,
-                            "{delimiter} component{idx}_{name} |> {encoder} |> E.encode 0",
-                            // TODO: this puts string components into quotes which is most likely not what we want
-                            // Apart from json and query encoders, we need a third encoder: component encoder
-                            encoder = to_atom(encoder_generation::generate_type_json_encoder(
-                                &arg.type_ident,
-                                "AE."
-                            )),
+                            "{delimiter} component{idx}_{name} |> {encoder}",
+                            encoder =
+                                to_atom(encoder_generation::generate_type_urlcomponent_encoder(
+                                    &arg.type_ident,
+                                    "AE."
+                                )),
                             name = arg.name,
                             idx = idx,
                             delimiter = delimiter

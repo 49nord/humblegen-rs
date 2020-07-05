@@ -143,8 +143,8 @@ fn generate_atom_decoder(atom: &ast::AtomType, ns: &str) -> String {
         ast::AtomType::Bool => "D.bool".to_string(),
         ast::AtomType::DateTime => format!("{}builtinDecodeIso8601", ns),
         ast::AtomType::Date => format!("{}builtinDecodeDate", ns),
-        ast::AtomType::Uuid => "D.string".to_string(),
-        ast::AtomType::Bytes => "D.string".to_string(),
+        ast::AtomType::Uuid => "BuiltinUuid.decode".to_string(),
+        ast::AtomType::Bytes => "BuiltinBytes.decode".to_string(),
     }
 }
 

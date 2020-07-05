@@ -66,10 +66,18 @@ fn generate_field_json_encoder(field: &ast::FieldNode, ns: &str) -> String {
 fn generate_field_query_encoder(field: &ast::FieldNode, ns: &str) -> String {
     // TODO: escape strings (but we could fix this in the whole codebase)
     match field.pair.type_ident {
-        ast::TypeIdent::BuiltIn(ast::AtomType::Str)
-        | ast::TypeIdent::BuiltIn(ast::AtomType::Uuid)
-        | ast::TypeIdent::BuiltIn(ast::AtomType::Bytes) => format!(
+        ast::TypeIdent::BuiltIn(ast::AtomType::Str) => format!(
             "Url.Builder.string \"{name}\" obj.{field_name}",
+            name = field.pair.name,
+            field_name = field_name(&field.pair.name)
+        ),
+        ast::TypeIdent::BuiltIn(ast::AtomType::Uuid) => format!(
+            "Url.Builder.string \"{name}\" (BuiltinUuid.encodeQuery obj.{field_name})",
+            name = field.pair.name,
+            field_name = field_name(&field.pair.name)
+        ),
+        ast::TypeIdent::BuiltIn(ast::AtomType::Bytes) => format!(
+            "Url.Builder.string \"{name}\" (BuiltinBytes.encodeQuery obj.{field_name})",
             name = field.pair.name,
             field_name = field_name(&field.pair.name)
         ),
@@ -172,6 +180,10 @@ fn generate_complex_type_query_encoder(type_ident: &ast::TypeIdent, ns: &str) ->
     generate_type_encoder(&generate_atom_query_encoder, type_ident, ns)
 }
 
+pub(crate) fn generate_type_urlcomponent_encoder(type_ident: &ast::TypeIdent, ns: &str) -> String {
+    generate_type_encoder(&generate_atom_urlcomponent_encoder, type_ident, ns)
+}
+
 fn generate_atom_json_encoder(atom: &ast::AtomType, ns: &str) -> String {
     match atom {
         ast::AtomType::Empty => "(_ -> E.null)".to_owned(),
@@ -183,22 +195,36 @@ fn generate_atom_json_encoder(atom: &ast::AtomType, ns: &str) -> String {
         ast::AtomType::Bool => "E.bool".to_owned(),
         ast::AtomType::DateTime => format!("{}builtinEncodeIso8601", ns),
         ast::AtomType::Date => format!("{}builtinEncodeDate", ns),
-        ast::AtomType::Uuid => "E.string".to_owned(),
-        ast::AtomType::Bytes => "E.string".to_owned(),
+        ast::AtomType::Uuid => "BuiltinUuid.encode".to_owned(),
+        ast::AtomType::Bytes => "BuiltinBytes.encode".to_owned(),
     }
 }
 
 fn generate_atom_query_encoder(atom: &ast::AtomType, ns: &str) -> String {
     match atom {
         ast::AtomType::Empty => "E.null".to_owned(),
-        ast::AtomType::Str | ast::AtomType::Uuid | ast::AtomType::Bytes => {
-            "Url.Builder.string".to_owned()
-        }
+        ast::AtomType::Str => "Url.Builder.string".to_owned(),
+        ast::AtomType::Uuid => "Url.Builder.uuid".to_owned(),
+        ast::AtomType::Bytes => "Url.Builder.bytes".to_owned(),
         ast::AtomType::I32 | ast::AtomType::U32 | ast::AtomType::U8 => "Url.Builder.int".to_owned(),
         ast::AtomType::F64 => "E.float".to_owned(),
         ast::AtomType::Bool => "E.bool".to_owned(),
         ast::AtomType::DateTime => format!("{}builtinEncodeIso8601", ns),
         ast::AtomType::Date => format!("{}builtinEncodeDate", ns),
+    }
+}
+
+fn generate_atom_urlcomponent_encoder(atom: &ast::AtomType, ns: &str) -> String {
+    match atom {
+        ast::AtomType::Empty => unimplemented!(),
+        ast::AtomType::Str => "identity".to_owned(),
+        ast::AtomType::I32 | ast::AtomType::U32 | ast::AtomType::U8 => "String.fromInt".to_owned(),
+        ast::AtomType::F64 => "String.fromFloat".to_owned(),
+        ast::AtomType::Bool => "String.fromBool".to_owned(),
+        ast::AtomType::DateTime => format!("{}builtinEncodeIso8601", ns),
+        ast::AtomType::Date => format!("{}builtinEncodeDate", ns),
+        ast::AtomType::Uuid => "BuiltinUuid.encodeUrlcomponent".to_owned(),
+        ast::AtomType::Bytes => "BuiltinBytes.encodeUrlcomponent".to_owned(),
     }
 }
 

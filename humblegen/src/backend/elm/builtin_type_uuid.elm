@@ -4,8 +4,14 @@ import Json.Encode as E
 type Uuid = Uuid String
 
 
-encode : Uuid -> String
+encode : Uuid -> E.Value
 encode (Uuid str) = E.string str
 
 decode : D.Decoder Uuid
-decode (Uuid str) = D.map Uuid D.string
+decode = D.map Uuid D.string
+
+queryEncode : Uuid -> String
+queryEncode (Uuid str) = str
+
+encodeUrlcomponent : Uuid -> String
+encodeUrlcomponent (Uuid str) = str

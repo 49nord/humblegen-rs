@@ -4,6 +4,10 @@ import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 import Json.Encode as E
 import Time  -- elm/time
 import Url.Builder
+import Api.BuiltIn.Bytes as BuiltinBytes
+import Api.BuiltIn.Uuid as BuiltinUuid
+
+
 
 
 builtinEncodeDate : Date.Date -> E.Value
