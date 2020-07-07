@@ -89,6 +89,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait-with-sync"
+version = "0.1.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3384e2b7d27f0c02fd4d3b94f8bb42564b2f860f149c83341edc512ce1ea4ee"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -498,7 +509,7 @@ dependencies = [
  "Inflector",
  "anyhow",
  "argh",
- "async-trait-with-sync",
+ "async-trait-with-sync 0.1.31",
  "base64",
  "comrak",
  "humblegen-rt",
@@ -523,7 +534,7 @@ name = "humblegen-rt"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "async-trait-with-sync",
+ "async-trait-with-sync 0.1.36",
  "base64",
  "chrono",
  "derivative",
