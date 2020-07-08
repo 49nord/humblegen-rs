@@ -52,7 +52,7 @@ expectRestfulJson toMsg clientVersion decoder =
             -- Body of these responses is JSON with two fields: code and kind. Since
             -- we already know the code, and kind is just server internal stack-trace-like garbage neither
             -- frontend code nor end-user care about, discard...
-            if metadata.statusCode == 401 then
+            if List.member metadata.statusCode [401, 403] then
               Err <| MissingOrInvalidAuth metadata
             else
               Err <| OtherwiseBadStatus metadata
