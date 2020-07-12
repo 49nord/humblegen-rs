@@ -33,7 +33,7 @@ tempfile = "3.1.0"
 serde_json = "1.0"
 
 # for trybuild in tests/rust.rs
-async-trait-with-sync = { git = "https://github.com/49nord/async-trait.git", rev = "3a4d80f667b78a62f0c57f2524100dafd6b01c31" }
+async-trait-with-sync = "0.1.36"
 humblegen-rt = { path = "../humblegen-rt" }
 serde = { version = "1.0.110", features = [ "derive" ] }
 tokio = { version = "0.2.20", features = ["full"] }
