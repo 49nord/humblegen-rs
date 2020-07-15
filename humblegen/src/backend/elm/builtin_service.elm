@@ -8,21 +8,16 @@ type BugKind =
      | LogicError -- bug in humblegen server implementation, made possible by lose typing in the humblespec, e.g. if a single error object is
                   -- used for all responses and the error returned does not make sense for the request
 
-type alias VersionPairing =
-  { server: Maybe String
-  , client: String
-  }
-
 type Error =
       MissingOrInvalidAuth Http.Metadata
     | OtherwiseBadStatus Http.Metadata -- most likely a server internal runtime error or bug in humblegen
     | NetworkProblems
     | Bug BugKind
 
-type alias Success a = {
+type alias Success a = { -- rust format string escaping
     data: a,
     metadata: Http.Metadata
-    }
+    } -- rust format string escaping
 
 type alias Response a = Result Error (Success a)
 
@@ -30,10 +25,7 @@ requestId : Http.Metadata -> Maybe String
 requestId metadata =
     Dict.get "request-id" metadata.headers 
 
-{-| Interpret response of a server
-
-Result is ok if status code was 200. 
--}
+-- Interpret response of a server
 expectRestfulJson : (Response a -> msg) -> String -> D.Decoder a -> Http.Expect msg
 expectRestfulJson toMsg clientVersion decoder =
   Http.expectStringResponse toMsg <|

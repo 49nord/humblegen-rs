@@ -83,6 +83,9 @@ pub(crate) struct CliArgs {
     /// input path to humble file
     #[argh(option, short = 'o')]
     pub(crate) output: path::PathBuf,
+    /// prefix to be used in elm module declarations
+    #[argh(option, default = "\"Api\".to_owned()")]
+    pub(crate) elm_module_root: String,
 }
 
 impl CliArgs {
@@ -99,8 +102,11 @@ impl CliArgs {
                     .map_err(CliError::LibraryError)?,
             )),
             Backend::Elm => Ok(Box::new(
-                humblegen::backend::elm::Generator::new(*self.artifacts)
-                    .map_err(CliError::LibraryError)?,
+                humblegen::backend::elm::Generator::new(
+                    *self.artifacts,
+                    self.elm_module_root.clone(),
+                )
+                .map_err(CliError::LibraryError)?,
             )),
             Backend::Docs => Ok(Box::new(humblegen::backend::docs::Generator::default())),
         }

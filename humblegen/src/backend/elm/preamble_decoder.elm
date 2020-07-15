@@ -3,8 +3,8 @@ import Dict exposing (Dict)
 import Iso8601  -- rtfeldman/elm-iso8601-date-strings
 import Json.Decode as D
 import Time  -- elm/time
-import Api.BuiltIn.Bytes as BuiltinBytes
-import Api.BuiltIn.Uuid as BuiltinUuid
+import {module_prefix}.BuiltIn.Bytes as BuiltinBytes
+import {module_prefix}.BuiltIn.Uuid as BuiltinUuid
 
 -- TODO: move into its own module to avoid name collision
 
@@ -16,17 +16,12 @@ required : String -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
 required key valDecoder decoder =
     custom (D.field key valDecoder) decoder
 
-{-| A helper function for a required index in a JSON list.
--}
-
+-- A helper function for a required index in a JSON list.
 requiredIdx : Int -> D.Decoder a -> D.Decoder (a -> b) -> D.Decoder b
 requiredIdx idx itemDecoder decoder =
     custom (D.index idx itemDecoder) decoder
 
-{-| Maybe-unwrapping decoder.
-
-Turns a `Maybe t` decoder into an a `t` decoder by outputting an error on `Nothing`.
--}
+-- Maybe-unwrapping decoder: Turns a `Maybe t` decoder into an a `t` decoder by outputting an error on `Nothing`.
 unwrapDecoder : D.Decoder (Maybe t) -> D.Decoder t
 unwrapDecoder =
     D.andThen
