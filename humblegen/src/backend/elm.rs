@@ -268,7 +268,7 @@ impl Generator {
                     )?;
                     write!(
                         file.start_line()?,
-                        "import {}.ServiceBuiltIn as S",
+                        "import {}.ServiceBuiltIn exposing (..)",
                         self.module_prefix
                     )?;
                     write!(file.start_line()?, "import Url.Builder")?;

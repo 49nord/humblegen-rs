@@ -32,31 +32,18 @@ pub(crate) fn generate(service: &ast::ServiceDef, file: &mut IndentWriter) -> Re
         )?;
 
         {
-            // built_signature
             let mut line_type_signature = Vec::new();
             let mut line_arguments = Vec::new();
 
             let endpoint_name = synthesize_endpoint_name(&endpoint.route);
-            write!(
-                line_type_signature,
-                "{} : String -> String -> Maybe String -> (Result S.Error (S.Success {})-> msg)",
-                endpoint_name,
-                to_atom(type_generation::generate_type_ident(
-                    endpoint.route.return_type(),
-                    "Ty."
-                ))
-            )?;
-            write!(
-                line_arguments,
-                "{} baseUrl clientVersion session msg",
-                endpoint_name
-            )?;
+            write!(line_type_signature, "{} : ", endpoint_name)?;
+            write!(line_arguments, "{}", endpoint_name)?;
 
             for (idx, component) in endpoint.route.components().iter().enumerate() {
                 if let ast::ServiceRouteComponent::Variable(arg) = component {
                     write!(
                         line_type_signature,
-                        " -> {}",
+                        "{} -> ",
                         to_atom(type_generation::generate_type_ident(&arg.type_ident, "Ty."))
                     )?;
                     write!(
@@ -71,23 +58,27 @@ pub(crate) fn generate(service: &ast::ServiceDef, file: &mut IndentWriter) -> Re
             if let Some(body) = endpoint.route.request_body() {
                 write!(
                     line_type_signature,
-                    " -> {}",
+                    "{} -> ",
                     to_atom(type_generation::generate_type_ident(&body, "Ty."))
                 )?;
                 write!(line_arguments, " body")?;
             }
 
-            if let Some(ident) = endpoint.route.query() {
-                write!(
-                    line_type_signature,
-                    " -> {}",
-                    type_generation::generate_type_ident(ident, "Ty.")
-                )?;
-                write!(line_arguments, " query")?;
-            }
-
             // return type
-            write!(line_type_signature, " -> Cmd msg")?;
+            write!(
+                line_type_signature,
+                "Request {} {}",
+                endpoint
+                    .route
+                    .query()
+                    .as_ref()
+                    .map(|q| type_generation::generate_type_ident(q, "Ty."))
+                    .unwrap_or_else(|| "NoQuery".to_owned()),
+                to_atom(type_generation::generate_type_ident(
+                    endpoint.route.return_type(),
+                    "Ty."
+                ))
+            )?;
 
             file.start_line()?.write_all(&line_type_signature)?;
             file.start_line()?.write_all(&line_arguments)?;
@@ -96,26 +87,18 @@ pub(crate) fn generate(service: &ast::ServiceDef, file: &mut IndentWriter) -> Re
         write!(file.handle(), " =")?;
 
         file.increase_indent();
-        write!(file.start_line()?, "Http.request")?;
+        write!(file.start_line()?, "makeRequest")?;
         file.increase_indent();
+
+        // method
         write!(
             file.start_line()?,
-            "{{ method = \"{}\"",
+            "\"{}\"",
             endpoint.route.http_method_as_str()
         )?;
-        write!(
-            file.start_line()?,
-            "{}",
-            ", headers = S.maybeWithAuthorization session"
-        )?;
-        write!(
-            file.start_line()?,
-            "{}",
-            ", url = Url.Builder.crossOrigin baseUrl"
-        )?;
 
+        // urlComponents
         {
-            // generate_endpoint_url
             file.increase_indent();
             for (idx, component) in endpoint.route.components().iter().enumerate() {
                 let is_first = idx == 0;
@@ -150,41 +133,42 @@ pub(crate) fn generate(service: &ast::ServiceDef, file: &mut IndentWriter) -> Re
             }
 
             write!(file.start_line()?, "]")?;
+        }
 
+        // queryEncoder
+        {
             if let Some(ident) = endpoint.route.query() {
                 write!(
                     file.start_line()?,
-                    "({} query)",
+                    "{}",
                     to_atom(encoder_generation::query_encoder(ident, "AE."))
                 )?;
             } else {
-                write!(file.start_line()?, "[]")?;
+                write!(file.start_line()?, "noQueryEncoder")?;
             }
-
-            file.decrease_indent();
         }
 
-        if let Some(body) = endpoint.route.request_body() {
-            write!(
-                file.start_line()?,
-                ", body = Http.jsonBody <| {} body",
-                to_atom(encoder_generation::generate_type_json_encoder(body, "AE."))
-            )?;
-        } else {
-            write!(file.start_line()?, ", body = Http.emptyBody")?;
-        }
-
+        // resolver
         write!(
             file.start_line()?,
-            ", expect = S.expectRestfulJson msg clientVersion {}",
+            "(jsonResolver ({}))",
             to_atom(decoder_generation::generate_type_decoder(
                 &endpoint.route.return_type(),
                 "AD."
             ))
         )?;
-        write!(file.start_line()?, ", timeout = Nothing")?;
-        write!(file.start_line()?, ", tracker = Nothing")?;
-        write!(file.start_line()?, "}}")?;
+
+        // |> withBody if we send a body
+        if let Some(body) = endpoint.route.request_body() {
+            write!(
+                file.start_line()?,
+                "|> withJsonBody {} body",
+                to_atom(encoder_generation::generate_type_json_encoder(body, "AE."))
+            )?;
+        }
+
+        file.decrease_indent();
+
         file.kill_indent();
     }
 
