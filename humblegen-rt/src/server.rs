@@ -5,6 +5,7 @@ use crate::regexset_map;
 use crate::regexset_map::RegexSetMap;
 use crate::service_protocol::{self, RuntimeError, ToErrorResponse};
 use derivative::Derivative;
+use tracing_futures::Instrument;
 
 use anyhow::Context;
 use hyper::Body;
@@ -60,9 +61,17 @@ pub async fn handle_request(
         .sample_iter(&rand::distributions::Alphanumeric)
         .take(30)
         .collect();
-    let span = tracing::debug_span!("handle_request", request_id = ?request_id);
-    let _enter = span.enter();
+    let span = tracing::error_span!("handle_request", request_id = ?request_id);
+    handle_request_impl(services, req, request_id)
+        .instrument(span)
+        .await
+}
 
+pub async fn handle_request_impl(
+    services: Arc<RegexSetMap<Request<Body>, Service>>,
+    req: Request<Body>,
+    request_id: String,
+) -> Response<Body> {
     let path = req.uri().path().to_string(); // necessary because we need to move req into dispatcher, but also need to move captures into dispatcher
 
     let mut response = match services.get(&path, &req) {
@@ -93,13 +102,18 @@ pub async fn handle_request(
                     let dispatcher = &route.dispatcher;
 
                     let dispatcher_result = {
-                        let dispatcher_span = tracing::debug_span!("invoke_dispatcher");
-                        let _enter = dispatcher_span.enter();
-                        dispatcher(req, captures).await
+                        let dispatcher_span = tracing::error_span!("invoke_dispatcher");
+                        dispatcher(req, captures).instrument(dispatcher_span).await
                     };
                     match dispatcher_result {
-                        Ok(r) => r,
-                        Err(e) => e.to_hyper_response(),
+                        Ok(r) => {
+                            tracing::debug!("handler returned Ok");
+                            r
+                        }
+                        Err(e) => {
+                            tracing::error!(err = ?e, "handler returned error");
+                            e.to_hyper_response()
+                        }
                     }
                 }
             }
@@ -183,12 +197,16 @@ where
         Ok(x) => serde_json::to_string(&x)
             .map(|s| Response::new(Body::from(s)))
             .unwrap_or_else(|e| {
+                tracing::error!(error = ?e, "cannot serialize handler response");
                 RuntimeError::SerializeHandlerResponse(e.to_string())
                     .to_error_response()
                     .to_hyper_response()
             }),
-        Err(e) => service_protocol::ServiceError::from(e)
-            .to_error_response()
-            .to_hyper_response(),
+        Err(e) => {
+            tracing::error!(error = ?e, "handler returned error");
+            service_protocol::ServiceError::from(e)
+                .to_error_response()
+                .to_hyper_response()
+        }
     }
 }
