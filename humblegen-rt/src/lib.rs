@@ -20,6 +20,7 @@ pub extern crate hyper;
 pub extern crate regex;
 pub extern crate tokio;
 pub extern crate tracing;
+pub extern crate tracing_futures;
 pub extern crate uuid;
 
 pub use async_trait_with_sync::async_trait;

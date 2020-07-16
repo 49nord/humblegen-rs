@@ -98,6 +98,7 @@ pub fn generate_services<'a, I: Iterator<Item = &'a ast::ServiceDef>>(
         use std::net::SocketAddr;
         #[allow(unused_imports)]
         use ::humblegen_rt::{hyper, tracing};
+        use ::humblegen_rt::tracing_futures::Instrument;
 
         /// Builds an HTTP server that exposes services implemented by handler trait objects.
         #[derive(Debug)]
@@ -381,9 +382,8 @@ fn generate_service(service: &Service) -> TokenStream {
                                 // Invoke the interceptor
                                 use ::humblegen_rt::service_protocol::ToErrorResponse;
                                 let ctx = {
-                                    let span = tracing::debug_span!("interceptor");
-                                    let _enter = span.enter();
-                                    handler.intercept_handler_pre(&req).await
+                                    let span = tracing::error_span!("interceptor");
+                                    handler.intercept_handler_pre(&req).instrument(span).await
                                         .map_err(::humblegen_rt::service_protocol::ServiceError::from)
                                         .map_err(|e| {
                                             tracing::debug!(service_error = ?format!("{:?}", e), "interceptor rejected request");
@@ -402,9 +402,8 @@ fn generate_service(service: &Service) -> TokenStream {
 
                                 // Invoke handler if interceptor doesn't return a ServiceError
                                 {
-                                    let span = tracing::debug_span!("handler");
-                                    let _enter = span.enter();
-                                    Ok(handler_response_to_hyper_response(handler.#traitfn_ident( ctx, #(#arg_list),* ).await))
+                                    let span = tracing::error_span!("handler");
+                                    Ok(handler_response_to_hyper_response(handler.#traitfn_ident( ctx, #(#arg_list),* ).instrument(span).await))
                                 }
                             })
                         }
