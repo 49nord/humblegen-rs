@@ -10,8 +10,8 @@ encode (Uuid str) = E.string str
 decode : D.Decoder Uuid
 decode = D.map Uuid D.string
 
-queryEncode : Uuid -> String
-queryEncode (Uuid str) = str
+encodeQuery : Uuid -> String
+encodeQuery (Uuid str) = str
 
 encodeUrlcomponent : Uuid -> String
 encodeUrlcomponent (Uuid str) = str
