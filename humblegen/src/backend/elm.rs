@@ -3,7 +3,6 @@
 // TODO: Fix lints and remove this.
 #![allow(clippy::write_literal)]
 
-
 use crate::{ast, Artifact, LibError, Spec};
 use anyhow::Result;
 use inflector::cases::camelcase::to_camel_case;
@@ -102,13 +101,15 @@ fn field_name(ident: &str) -> String {
 }
 
 pub struct Generator {
+    module_prefix: String,
     _artifact: Artifact,
 }
 
 impl Generator {
-    pub fn new(artifact: Artifact) -> Result<Self, LibError> {
+    pub fn new(artifact: Artifact, module_prefix: String) -> Result<Self, LibError> {
         match artifact {
             Artifact::TypesOnly | Artifact::ClientEndpoints => Ok(Self {
+                module_prefix,
                 _artifact: artifact,
             }),
             Artifact::ServerEndpoints => Err(LibError::UnsupportedArtifact {
@@ -118,7 +119,7 @@ impl Generator {
         }
     }
 
-    fn make_file(_spec: &Spec, outdir: &Path, name: &str) -> Result<IndentWriter, LibError> {
+    fn make_file(&self, _spec: &Spec, outdir: &Path, name: &str) -> Result<IndentWriter, LibError> {
         // TODO: populate mem filesystem or temp folder first, then make everything visible at once
         // to avoid partial write out on error
         let mut file = IndentWriter::for_file(outdir, &format!("{}.elm", name))?;
@@ -126,7 +127,8 @@ impl Generator {
         // TODO: make module path prefix configurable
         write!(
             file.handle(),
-            "module Api.{} exposing (..)",
+            "module {}.{} exposing (..)",
+            self.module_prefix,
             name.replace("/", ".")
         )?;
         file.empty_lines(2)?;
@@ -135,7 +137,7 @@ impl Generator {
         Ok(file)
     }
 
-    pub fn generate_user_defined_types(spec: &Spec, outdir: &Path) -> Result<(), LibError> {
+    pub fn generate_user_defined_types(&self, spec: &Spec, outdir: &Path) -> Result<(), LibError> {
         {
             let mut builtin_dir = PathBuf::from(outdir);
             builtin_dir.push("BuiltIn");
@@ -143,28 +145,28 @@ impl Generator {
         }
 
         {
-            let mut file = Self::make_file(spec, outdir, "BuiltIn/Bytes")?;
+            let mut file = self.make_file(spec, outdir, "BuiltIn/Bytes")?;
             write!(
                 file.handle(),
                 "{}",
-                include_str!("./elm/builtin_type_bytes.elm")
+                include_str!("./elm/builtin_type_bytes.elm"),
             )?;
         }
 
         {
-            let mut file = Self::make_file(spec, outdir, "BuiltIn/Uuid")?;
+            let mut file = self.make_file(spec, outdir, "BuiltIn/Uuid")?;
             write!(
                 file.handle(),
                 "{}",
-                include_str!("./elm/builtin_type_uuid.elm")
+                include_str!("./elm/builtin_type_uuid.elm"),
             )?;
         }
 
-        let mut file = Self::make_file(spec, outdir, "Data")?;
+        let mut file = self.make_file(spec, outdir, "Data")?;
         write!(
             file.start_line()?,
-            "{}",
-            include_str!("./elm/preamble_types.elm")
+            include_str!("./elm/preamble_types.elm"),
+            module_prefix = self.module_prefix
         )?;
         file.empty_lines(2)?;
 
@@ -183,13 +185,17 @@ impl Generator {
         Ok(())
     }
 
-    pub fn generate_decoders(spec: &Spec, outdir: &Path) -> Result<(), LibError> {
-        let mut file = Self::make_file(spec, outdir, "Decode")?;
-        write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+    pub fn generate_decoders(&self, spec: &Spec, outdir: &Path) -> Result<(), LibError> {
+        let mut file = self.make_file(spec, outdir, "Decode")?;
         write!(
             file.start_line()?,
-            "{}",
-            include_str!("./elm/preamble_decoder.elm")
+            "import {}.Data exposing (..)",
+            self.module_prefix
+        )?;
+        write!(
+            file.start_line()?,
+            include_str!("./elm/preamble_decoder.elm"),
+            module_prefix = self.module_prefix
         )?;
         file.empty_lines(2)?;
         write!(
@@ -200,13 +206,17 @@ impl Generator {
         Ok(())
     }
 
-    pub fn generate_encoders(spec: &Spec, outdir: &Path) -> Result<(), LibError> {
-        let mut file = Self::make_file(spec, outdir, "Encode")?;
-        write!(file.start_line()?, "{}", "import Api.Data exposing (..)")?;
+    pub fn generate_encoders(&self, spec: &Spec, outdir: &Path) -> Result<(), LibError> {
+        let mut file = self.make_file(spec, outdir, "Encode")?;
         write!(
             file.start_line()?,
-            "{}",
-            include_str!("./elm/preamble_encoder.elm")
+            "import {}.Data exposing (..)",
+            self.module_prefix
+        )?;
+        write!(
+            file.start_line()?,
+            include_str!("./elm/preamble_encoder.elm"),
+            module_prefix = self.module_prefix
         )?;
         file.empty_lines(2)?;
         write!(
@@ -217,7 +227,7 @@ impl Generator {
         Ok(())
     }
 
-    pub fn generate_endpoints(spec: &Spec, outdir: &Path) -> Result<(), LibError> {
+    pub fn generate_endpoints(&self, spec: &Spec, outdir: &Path) -> Result<(), LibError> {
         {
             let mut service_dir = PathBuf::from(outdir);
             service_dir.push("Service");
@@ -225,11 +235,11 @@ impl Generator {
         }
 
         {
-            let mut file = Self::make_file(spec, outdir, "ServiceBuiltIn")?;
+            let mut file = self.make_file(spec, outdir, "ServiceBuiltIn")?;
             write!(
                 file.handle(),
                 "{}",
-                include_str!("./elm/builtin_service.elm")
+                include_str!("./elm/builtin_service.elm"),
             )?;
         }
 
@@ -238,20 +248,36 @@ impl Generator {
                 ast::SpecItem::StructDef(..) | ast::SpecItem::EnumDef(..) => {}
                 ast::SpecItem::ServiceDef(service) => {
                     let mut file =
-                        Self::make_file(spec, outdir, &format!("Service/{}", service.name))?;
-                    write!(file.start_line()?, "{}", "import Api.Data as Ty")?;
+                        self.make_file(spec, outdir, &format!("Service/{}", service.name))?;
+                    write!(
+                        file.start_line()?,
+                        "import {}.Data as Ty",
+                        self.module_prefix
+                    )?;
                     write!(file.start_line()?, "{}", "import Json.Decode as D")?;
                     write!(file.start_line()?, "{}", "import Json.Encode as E")?;
-                    write!(file.start_line()?, "{}", "import Api.Encode as AE")?;
-                    write!(file.start_line()?, "{}", "import Api.Decode as AD")?;
-                    write!(file.start_line()?, "{}", "import Api.ServiceBuiltIn as S")?;
-                    write!(file.start_line()?, "{}", "import Url.Builder")?;
+                    write!(
+                        file.start_line()?,
+                        "import {}.Encode as AE",
+                        self.module_prefix
+                    )?;
+                    write!(
+                        file.start_line()?,
+                        "import {}.Decode as AD",
+                        self.module_prefix
+                    )?;
+                    write!(
+                        file.start_line()?,
+                        "import {}.ServiceBuiltIn exposing (..)",
+                        self.module_prefix
+                    )?;
+                    write!(file.start_line()?, "import Url.Builder")?;
                     write!(file.start_line()?, "{}", "import Http")?;
 
                     write!(
                         file.start_line()?,
-                        "{}",
-                        include_str!("./elm/preamble_service.elm")
+                        include_str!("./elm/preamble_service.elm"),
+                        module_prefix = self.module_prefix
                     )?;
                     file.empty_lines(2)?;
                     endpoint_generation::generate(service, &mut file)?;
@@ -285,10 +311,10 @@ impl crate::CodeGenerator for Generator {
     fn generate(&self, spec: &Spec, output: &Path) -> Result<(), LibError> {
         Self::validate_output_dir(&output)?;
 
-        Self::generate_user_defined_types(&spec, &output)?;
-        Self::generate_decoders(&spec, &output)?;
-        Self::generate_encoders(&spec, &output)?;
-        Self::generate_endpoints(&spec, &output)?;
+        self.generate_user_defined_types(&spec, &output)?;
+        self.generate_decoders(&spec, &output)?;
+        self.generate_encoders(&spec, &output)?;
+        self.generate_endpoints(&spec, &output)?;
 
         Ok(())
     }

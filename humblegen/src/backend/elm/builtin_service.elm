@@ -1,76 +1,138 @@
 import Http
 import Json.Decode as D
-import Dict
+import Json.Encode as E
+import Url
+import Url.Builder
+import Task exposing (Task)
 
-type BugKind =
-       InvalidResponseBody Http.Metadata D.Error -- Failed to decode json. most likely a bug in humblegen
-     | InvalidRequestUrl -- probably a bug in the elm url core package
-     | LogicError -- bug in humblegen server implementation, made possible by lose typing in the humblespec, e.g. if a single error object is
-                  -- used for all responses and the error returned does not make sense for the request
+type alias QueryEncoder q = (q -> List Url.Builder.QueryParameter)
 
-type alias VersionPairing =
-  { server: Maybe String
-  , client: String
-  }
-
-type Error =
-      MissingOrInvalidAuth Http.Metadata
-    | OtherwiseBadStatus Http.Metadata -- most likely a server internal runtime error or bug in humblegen
-    | NetworkProblems
-    | Bug BugKind
-
-type alias Success a = {
-    data: a,
-    metadata: Http.Metadata
+type alias Request q t =
+    { method : String
+    , headers : List Http.Header
+    , urlComponents : List String
+    , query: Maybe q
+    , queryEncoder: QueryEncoder q
+    , body : Http.Body
+    , resolver : Http.Resolver Error t
+    , timeout : Maybe Float
+    , base : String
     }
 
-type alias Response a = Result Error (Success a)
 
-requestId : Http.Metadata -> Maybe String
-requestId metadata =
-    Dict.get "request-id" metadata.headers 
-
-{-| Interpret response of a server
-
-Result is ok if status code was 200. 
--}
-expectRestfulJson : (Response a -> msg) -> String -> D.Decoder a -> Http.Expect msg
-expectRestfulJson toMsg clientVersion decoder =
-  Http.expectStringResponse toMsg <|
-    \response ->
-      case response of
-        Http.BadUrl_ url ->
-          Err <| Bug InvalidRequestUrl
-
-        Http.Timeout_ ->
-          Err <| NetworkProblems
-
-        Http.NetworkError_ ->
-          Err <| NetworkProblems
-
-        Http.BadStatus_ metadata body ->
-            -- Body of these responses is JSON with two fields: code and kind. Since
-            -- we already know the code, and kind is just server internal stack-trace-like garbage neither
-            -- frontend code nor end-user care about, discard...
-            if List.member metadata.statusCode [401, 403] then
-              Err <| MissingOrInvalidAuth metadata
-            else
-              Err <| OtherwiseBadStatus metadata
-
-        Http.GoodStatus_ metadata body ->
-          case D.decodeString decoder body of
-            Ok value ->
-              Ok <| Success value metadata
-
-            Err err ->
-              Err <| Bug <| InvalidResponseBody metadata err
+type ResponseBody
+    = StringResponse String
 
 
--- TODO: this code is obviously not portable to other projects, add auth annotations to humblegen
-withAuthorization : String -> Http.Header
-withAuthorization session = 
-    Http.header "Authorization" <| "Custom " ++ session
+type Error
+    = Bug String
+    | HttpBug Http.Metadata ResponseBody
+    | InvalidResponse Http.Metadata ResponseBody D.Error
+    | TransportError String
+    | AuthorizationError -- humble service protocol level authorization error (e.g. the server-side request handler indicates that the client is unauthorized to access the resource. The client's access token is valid, though.
+    | AuthenticationError -- humble service protocol level authentication error (e.g. the server-side request handler indicates that the client did not provide a valid access token)
+    | ServerError
 
-maybeWithAuthorization : Maybe String -> List Http.Header
-maybeWithAuthorization = 
-    (Maybe.map (withAuthorization >> List.singleton)) >> (Maybe.withDefault [])
+
+makeRequest : String -> List String -> QueryEncoder q -> Http.Resolver Error t -> Request q t
+makeRequest method urlComponents queryEncoder resolver =
+    { method = method
+    , headers = []
+    , base = ""
+    , query = Nothing
+    , queryEncoder = queryEncoder
+    , urlComponents = urlComponents
+    , body = Http.emptyBody
+    , resolver = resolver
+    , timeout = Nothing
+    }
+
+type alias NoQuery = Never
+
+noQueryEncoder : QueryEncoder Never
+noQueryEncoder _ = []
+
+jsonResolver : D.Decoder t -> Http.Resolver Error t
+jsonResolver =
+    let
+        resolve decoder response =
+            case response of
+                Http.BadUrl_ badUrl ->
+                    Err <| Bug <| "bad url: " ++ badUrl
+
+                Http.Timeout_ ->
+                    Err <| TransportError "Http.Timeout_"
+
+                Http.NetworkError_ ->
+                    Err <| TransportError "Http.NetworkError_"
+
+                Http.BadStatus_ metadata body ->
+                    Err <|
+                        case metadata.statusCode of
+                            401 ->
+                                AuthorizationError
+
+                            403 ->
+                                AuthenticationError
+
+                            500 ->
+                                ServerError
+
+                            _ ->
+                                HttpBug metadata (StringResponse body)
+
+                Http.GoodStatus_ metadata body ->
+                    D.decodeString decoder body
+                        |> Result.mapError (InvalidResponse metadata (StringResponse body))
+    in
+    Http.stringResolver << resolve
+
+
+withBase : String -> Request q t -> Request q t
+withBase base req =
+    { req | base = base }
+
+withQuery : q -> Request q t -> Request q t
+withQuery query req =
+    { req | query = Just query }
+
+    
+
+withBody : Http.Body -> Request q t -> Request q t
+withBody body req =
+    { req | body = body }
+
+
+withTimeout : Float -> Request q t -> Request q t
+withTimeout timeout req =
+    { req | timeout = Just timeout }
+
+
+withHeader : String -> String -> Request q t -> Request q t
+withHeader name value req =
+    { req | headers = Http.header name value :: req.headers }
+
+
+withJsonBody : (body -> E.Value) -> body -> Request q t -> Request q t
+withJsonBody encoder value req =
+    { req | body = Http.stringBody "application/json" <| E.encode 2 (encoder value) }
+
+
+makeUrl : Request q t -> String
+makeUrl req =
+    Url.Builder.crossOrigin
+         req.base
+            req.urlComponents
+            (Maybe.withDefault [] <| Maybe.map req.queryEncoder req.query)
+
+
+toTask : Request q t -> Task Error t
+toTask req =
+    Http.task
+        { method = req.method
+        , headers = req.headers
+        , url = makeUrl req
+        , body = req.body
+        , resolver = req.resolver
+        , timeout = req.timeout
+        }
