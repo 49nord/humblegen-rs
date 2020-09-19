@@ -1,5 +1,6 @@
 use anyhow::{self, Result};
 use std::{ops::Deref, path, str};
+use structopt::StructOpt;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -48,6 +49,18 @@ impl str::FromStr for Artifact {
     }
 }
 
+// This impl is necessary allow the usage of the structopt default_value attribute
+impl ToString for Artifact {
+    fn to_string(&self) -> String {
+        match self.0 {
+            // These strings have to match the ones in str::FromString
+            humblegen::Artifact::TypesOnly => "TYPES".to_string(),
+            humblegen::Artifact::ClientEndpoints => "CLIENT".to_string(),
+            humblegen::Artifact::ServerEndpoints => "SERVER".to_string(),
+        }
+    }
+}
+
 impl Deref for Artifact {
     type Target = humblegen::Artifact;
 
@@ -58,33 +71,22 @@ impl Deref for Artifact {
 
 /// Command-line arguments
 // TODO: turn into enum separating language backends from docs backend, docs backend does not need a gen_server and gen_client field
-#[derive(argh::FromArgs)]
-#[argh(description = "generate code from humble protocol spec")]
+#[derive(StructOpt)]
+#[structopt(about = "generate code from humble protocol spec")]
 pub(crate) struct CliArgs {
     /// language to generate code for
-    #[argh(
-        option,
-        short = 'l',
-        long = "language",
-        from_str_fn(str::FromStr::from_str)
-    )]
+    #[structopt(short = "l", long = "language")]
     pub(crate) backend: Backend,
     /// generate REST endpoints for a server
-    #[argh(
-        option,
-        short = 'a',
-        from_str_fn(str::FromStr::from_str),
-        default = "Artifact::default()"
-    )]
+    #[structopt(short = "a", long = "artifacts", default_value)]
     pub(crate) artifacts: Artifact,
     /// input path to humble file
-    #[argh(positional)]
     pub(crate) input: path::PathBuf,
     /// input path to humble file
-    #[argh(option, short = 'o')]
+    #[structopt(short = "o", long = "output")]
     pub(crate) output: path::PathBuf,
     /// prefix to be used in elm module declarations
-    #[argh(option, default = "\"Api\".to_owned()")]
+    #[structopt(long, default_value = "\"Api\"")]
     pub(crate) elm_module_root: String,
 }
 

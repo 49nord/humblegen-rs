@@ -12,19 +12,19 @@ description = "An experimental code-generator in the vain of protobuf, but a lit
 
 [dependencies]
 Inflector = "0.11.4"
-argh = "0.1.3"
+anyhow = "1.0"
+base64 = "0.12.1"
+comrak = "0.7"
 itertools = "0.9"
 log = "0.4"
 pest = "2.1.3"
 pest_derive = "2.1.0"
 proc-macro2 = "1.0.8"
 quote = "1.0.3"
+structopt = "0.3.16"
 syn = "1.0.17"
-which = { version = "3", optional = true }
-base64 = "0.12.1"
-comrak = "0.7"
-anyhow = "1.0"
 thiserror = "1.0"
+which = { version = "3", optional = true }
 
 
 [dev-dependencies]
