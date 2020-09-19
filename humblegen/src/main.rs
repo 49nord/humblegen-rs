@@ -3,9 +3,10 @@
 mod cli;
 
 use anyhow::{Context, Result};
+use structopt::StructOpt;
 
 fn main() -> Result<()> {
-    let args: cli::CliArgs = argh::from_env();
+    let args = cli::CliArgs::from_args();
 
     let spec_file = std::fs::File::open(&args.input).context(format!(
         "unable to open specification file {:?}",
