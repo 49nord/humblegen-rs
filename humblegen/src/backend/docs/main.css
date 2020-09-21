@@ -120,7 +120,7 @@ body {
     padding: 1em 0 .2em 0;
 }
 
-.endpoint--return-type, .endpoint--properties {
+.endpoint--return-type, .endpoint--properties-title {
     padding-left: .4em; 
     font-weight: bold;
     flex-grow: 1;
@@ -147,6 +147,18 @@ body {
     padding-right: 0.3em;
 }
 
+.endpoint--properties .endpoint--body-type {
+    padding-left: .8em;
+    padding-top: .4em;
+    font-family: 'Roboto Mono', monospace;
+    font-size: .8em;
+}
+
+.endpoint--properties .endpoint--body-type::before {
+    content: "Body:";
+    display: inline-block;
+    padding-right: 0.3em;
+}
 
 .fold-open .endpoint--method-and-route, .fold-open .userDefinedType--kind-and-name {
     background: #d3d3d329
