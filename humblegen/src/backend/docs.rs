@@ -6,7 +6,7 @@
 use crate::{ast, LibError};
 
 use anyhow::Result;
-use comrak::{markdown_to_html, ComrakOptions};
+use comrak::markdown_to_html;
 use itertools::Itertools;
 
 use std::io::Write;
@@ -68,7 +68,7 @@ impl Context {
                     serviceName = Escape(service.name.as_str()),
                     serviceDescription = markdown_to_html(
                         service.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
+                        &basic_options()
                     ),
                     serviceEndpoints = self.endpoints_to_html(&service.endpoints),
                 )
@@ -96,7 +96,7 @@ impl Context {
                     name = Escape(&struct_def.name),
                     description = markdown_to_html(
                         struct_def.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
+                        &basic_options()
                     ),
                     codeSamples = Self::struct_definition_to_html(struct_def),
                     id = Self::link_to_user_defined_type(&struct_def.name)
@@ -107,7 +107,7 @@ impl Context {
                     name = Escape(&enum_def.name),
                     description = markdown_to_html(
                         enum_def.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
+                        &basic_options()
                     ),
                     codeSamples = Self::enum_definition_to_html(enum_def),
                     id = Self::link_to_user_defined_type(&enum_def.name)
@@ -148,7 +148,7 @@ impl Context {
                         fieldType = Self::type_ident_to_html(&field_node.pair.type_ident),
                         fieldComment = markdown_to_html(
                             &field_node.doc_comment.as_deref().unwrap_or(""),
-                            &ComrakOptions::default()
+                            &basic_options()
                         )
                     )
                 })
@@ -182,7 +182,7 @@ impl Context {
                             variantValue = "<i>empty</i>",
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
+                                &basic_options()
                             )
                         ),
                         ast::VariantType::Newtype(ty) => format!(
@@ -193,7 +193,7 @@ impl Context {
                             variantValue = Self::type_ident_to_html(&ty),
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
+                                &basic_options()
                             )
                         ),
 
@@ -205,7 +205,7 @@ impl Context {
                             variantValue = Self::tuple_def_to_html(tuple),
                             variantComment = markdown_to_html(
                                 &variant.doc_comment.as_deref().unwrap_or(""),
-                                &ComrakOptions::default()
+                                &basic_options()
                             )
                         ),
                         ast::VariantType::Struct(fields) => {
@@ -217,7 +217,7 @@ impl Context {
                                 variantValue = "<i>anonymous structure</i>",
                                 variantComment = markdown_to_html(
                                     &variant.doc_comment.as_deref().unwrap_or(""),
-                                    &ComrakOptions::default()
+                                    &basic_options()
                                 )
                             )];
 
@@ -230,7 +230,7 @@ impl Context {
                                     variantValue = Self::type_ident_to_html(&field.pair.type_ident),
                                     variantComment = markdown_to_html(
                                         &field.doc_comment.as_deref().unwrap_or(""),
-                                        &ComrakOptions::default(),
+                                        &basic_options(),
                                     ),
                                 ));
                             }
@@ -263,13 +263,13 @@ impl Context {
                     endpointLink = Self::components_to_link(&endpoint.route),
                     endpointDescription = markdown_to_html(
                         endpoint.doc_comment.as_deref().unwrap_or(""),
-                        &ComrakOptions::default()
+                        &basic_options()
                     ),
                     endpointSummary = markdown_to_html(
                         &markdown_get_first_line_as_summary(
                             endpoint.doc_comment.as_deref().unwrap_or("")
                         ),
-                        &ComrakOptions::default()
+                        &basic_options()
                     ),
                     endpointReturn = Self::type_ident_to_html(endpoint.route.return_type()),
                     endpointRouteQuery = endpoint
@@ -448,4 +448,31 @@ impl crate::CodeGenerator for Generator {
             .map_err(LibError::IoError)?;
         Ok(())
     }
+}
+
+/// Get the basic formatting options for writing markdown as HTML.
+pub fn basic_options() -> comrak::ComrakOptions {
+    // all options are written here to give an overview which are available.
+    let mut options = comrak::ComrakOptions::default();
+
+    options.extension.strikethrough = true;
+    options.extension.tagfilter = false;
+    options.extension.table = true;
+    options.extension.autolink = false;
+    options.extension.tasklist = true;
+    options.extension.superscript = true;
+    options.extension.header_ids = None;
+    options.extension.footnotes = false;
+    options.extension.description_lists = true;
+
+    options.parse.smart = false;
+    options.parse.default_info_string = None;
+
+    options.render.hardbreaks = false;
+    options.render.github_pre_lang = false;
+    options.render.width = 0; // magic number to disable wrap column
+    options.render.unsafe_ = false;
+    options.render.escape = false;
+
+    options
 }
