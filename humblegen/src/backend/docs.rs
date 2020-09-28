@@ -278,7 +278,7 @@ impl Context {
                         .as_ref()
                         .map(|q| { format!("?{}", Self::type_ident_to_html(q)) })
                         .unwrap_or_default(),
-                    //endpointProperties = "",
+                    endpointProperties = Self::properties_to_html(&endpoint.route),
                 )
             })
             .join("\n")
@@ -374,6 +374,16 @@ impl Context {
             .join("");
 
         format!("{}{}", route.http_method_as_str(), component_str)
+    }
+
+    pub fn properties_to_html(route: &ast::ServiceRoute) -> String {
+        match route.request_body() {
+            Some(type_ident) => format!(
+                include_str!("docs/endpoint-properties.html"),
+                endpointBody = Self::type_ident_to_html(type_ident),
+            ),
+            None => "".to_owned(),
+        }
     }
 
     // FIXME: Consider renaming this
