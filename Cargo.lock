@@ -494,7 +494,7 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
 name = "humblegen"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "Inflector",
  "anyhow",
@@ -521,7 +521,7 @@ dependencies = [
 
 [[package]]
 name = "humblegen-rt"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait-with-sync",

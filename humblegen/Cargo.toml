@@ -1,6 +1,6 @@
 [package]
 name = "humblegen"
-version = "0.3.2"
+version = "0.4.0"
 license = "Apache-2.0 OR MIT"
 authors = [
     "Marc Brinkmann <git@marcbrinkmann.de>",
@@ -35,9 +35,9 @@ serde_json = "1.0"
 # for trybuild in tests/rust.rs
 async-trait-with-sync = "0.1.36"
 humblegen-rt = { path = "../humblegen-rt" }
-serde = { version = "1.0.110", features = [ "derive" ] }
+serde = { version = "1.0.110", features = ["derive"] }
 tokio = { version = "0.2.20", features = ["full"] }
 
 [features]
-default = [ "which-rustfmt" ]
-which-rustfmt = [ "which" ]
+default = ["which-rustfmt"]
+which-rustfmt = ["which"]
