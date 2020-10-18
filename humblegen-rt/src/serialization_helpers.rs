@@ -11,7 +11,8 @@ where
     E: std::fmt::Display,
     T: std::str::FromStr<Err = E>,
 {
-    std::primitive::str::parse(value).map_err(|e| {
+    // TODO: Use std::primitive::str here, once Rust 1.43.0 has been out longer.
+    str::parse(value).map_err(|e| {
         RuntimeError::RouteParamInvalid {
             param_name: name.to_owned(),
             parse_error: format!("{}", e),
@@ -48,8 +49,7 @@ pub fn deser_query_serde_urlencoded<'a, T: serde::de::Deserialize<'a>>(
 pub fn deser_query_primitive<E: std::fmt::Display, T: std::str::FromStr<Err = E>>(
     query: &str,
 ) -> Result<T, ErrorResponse> {
-    std::primitive::str::parse(query)
-        .map_err(|e| RuntimeError::QueryInvalid(format!("{}", e)).to_error_response())
+    str::parse(query).map_err(|e| RuntimeError::QueryInvalid(format!("{}", e)).to_error_response())
 }
 
 /// Helper function used by generate code to deserialize a humblegen `bytes` field.
